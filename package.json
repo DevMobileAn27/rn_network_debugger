@@ -1,0 +1,29 @@
+{
+  "name": "@quocandev27/rn_network_debugger",
+  "version": "0.2.0",
+  "description": "Dev-only React Native network capture bridge for React Native Viewer.",
+  "main": "index.js",
+  "react-native": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "android",
+    "bootstrapRuntime.js",
+    "ios",
+    "index.d.ts",
+    "index.js",
+    "react-native.config.js",
+    "README.md",
+    "RNNetworkDebugger.podspec"
+  ],
+  "keywords": [
+    "react-native",
+    "debugger",
+    "network",
+    "development"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": ">=0.74"
+  }
+}
