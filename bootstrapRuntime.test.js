@@ -69,3 +69,27 @@ test('createRNNetworkDebuggerBootstrapRuntime boots capture with resolved viewer
 
   assert.deepEqual(stopped, ['current']);
 });
+
+test('createRNNetworkDebuggerBootstrapRuntime can boot directly from a viewer port without a config file', () => {
+  const started = [];
+
+  const runtime = createRNNetworkDebuggerBootstrapRuntime({
+    getPlatform: () => 'ios',
+    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getGlobalObject: () => ({}),
+    startCapture: options => {
+      started.push(options);
+      return {stop() {}};
+    },
+  });
+
+  runtime.bootRNNetworkDebuggerWithPort(49001);
+
+  assert.deepEqual(started, [
+    {
+      viewerURL: `ws://192.168.0.50:49001${DEFAULT_VIEWER_PATH}`,
+      maxBodyPreviewCharacters: 2048,
+      maskHeaders: DEFAULT_MASK_HEADERS,
+    },
+  ]);
+});

@@ -28,6 +28,7 @@ const bootstrapRuntime = createRNNetworkDebuggerBootstrapRuntime({
 
 const {
   bootRNNetworkDebugger,
+  bootRNNetworkDebuggerWithPort,
   resolveRNNetworkDebuggerViewerHost,
   resolveRNNetworkDebuggerViewerURL,
   stopRNNetworkDebuggerBootstrap,
@@ -38,6 +39,7 @@ const createRNNetworkDebuggerController = createRNVNetworkCaptureController;
 const startRNNetworkDebugger = startRNVNetworkCapture;
 const stopRNNetworkDebugger = stopRNVNetworkCapture;
 const bootRNVNetworkCapture = bootRNNetworkDebugger;
+const bootRNVNetworkCaptureWithPort = bootRNNetworkDebuggerWithPort;
 const resolveRNVViewerHost = resolveRNNetworkDebuggerViewerHost;
 const resolveRNVViewerURL = resolveRNNetworkDebuggerViewerURL;
 const stopRNVNetworkCaptureBootstrap = stopRNNetworkDebuggerBootstrap;
@@ -46,6 +48,7 @@ export {
   addRNNetworkDebuggerListener,
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,
+  bootRNNetworkDebuggerWithPort,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,
@@ -59,6 +62,7 @@ export {
   stopRNNetworkDebuggerBootstrap,
   addRNVNetworkListener,
   bootRNVNetworkCapture,
+  bootRNVNetworkCaptureWithPort,
   createRNVNetworkCaptureController,
   resolveRNVViewerHost,
   resolveRNVViewerURL,
@@ -71,6 +75,7 @@ export default {
   addRNNetworkDebuggerListener,
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,
+  bootRNNetworkDebuggerWithPort,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,
@@ -84,6 +89,7 @@ export default {
   stopRNNetworkDebuggerBootstrap,
   addRNVNetworkListener,
   bootRNVNetworkCapture,
+  bootRNVNetworkCaptureWithPort,
   createRNVNetworkCaptureController,
   resolveRNVViewerHost,
   resolveRNVViewerURL,

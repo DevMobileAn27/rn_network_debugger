@@ -94,6 +94,11 @@ export declare function bootRNNetworkDebugger(
   config?: RNNetworkDebuggerConfig,
 ): RNNetworkDebuggerController | null;
 
+export declare function bootRNNetworkDebuggerWithPort(
+  viewerPort: number,
+  overrides?: RNNetworkDebuggerConfig,
+): RNNetworkDebuggerController | null;
+
 export declare function stopRNNetworkDebuggerBootstrap(): void;
 
 export declare function addRNNetworkDebuggerListener(
@@ -128,6 +133,11 @@ export declare function bootRNVNetworkCapture(
   config?: RNNetworkDebuggerConfig,
 ): RNNetworkDebuggerController | null;
 
+export declare function bootRNVNetworkCaptureWithPort(
+  viewerPort: number,
+  overrides?: RNNetworkDebuggerConfig,
+): RNNetworkDebuggerController | null;
+
 export declare function resolveRNVViewerHost(
   input?: RNNetworkDebuggerResolveInput,
 ): string;
@@ -142,6 +152,7 @@ declare const RNNetworkDebugger: {
   addRNNetworkDebuggerListener: typeof addRNNetworkDebuggerListener;
   createRNNetworkDebuggerController: typeof createRNNetworkDebuggerController;
   bootRNNetworkDebugger: typeof bootRNNetworkDebugger;
+  bootRNNetworkDebuggerWithPort: typeof bootRNNetworkDebuggerWithPort;
   DEFAULT_MASK_HEADERS: typeof DEFAULT_MASK_HEADERS;
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS: typeof DEFAULT_MAX_BODY_PREVIEW_CHARACTERS;
   DEFAULT_VIEWER_PATH: typeof DEFAULT_VIEWER_PATH;
@@ -156,6 +167,7 @@ declare const RNNetworkDebugger: {
   addRNVNetworkListener: typeof addRNVNetworkListener;
   createRNVNetworkCaptureController: typeof createRNVNetworkCaptureController;
   bootRNVNetworkCapture: typeof bootRNVNetworkCapture;
+  bootRNVNetworkCaptureWithPort: typeof bootRNVNetworkCaptureWithPort;
   resolveRNVViewerHost: typeof resolveRNVViewerHost;
   resolveRNVViewerURL: typeof resolveRNVViewerURL;
   startRNVNetworkCapture: typeof startRNVNetworkCapture;

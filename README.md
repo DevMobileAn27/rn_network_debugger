@@ -1,37 +1,36 @@
-# `rn_network_debugger`
+# `@quocandev27/rn_network_debugger`
 
-`rn_network_debugger` is a dev-only React Native library extracted from `rnv_network_sdk`.
-It captures `fetch` and `XMLHttpRequest` traffic inside a React Native app, then forwards
-those events to React Native Viewer through the local ingest endpoint `ws://<mac-ip>:38940/rnv/network`.
+Thư viện debug dành cho React Native, dùng để bắt `fetch` và `XMLHttpRequest` rồi gửi log network sang `React Native Viewer`.
 
-## Exports
+Package này chỉ nên dùng trong môi trường dev/debug.
 
-The package keeps the original SDK API for compatibility:
+GitHub: https://github.com/DevMobileAn27/rn_network_debugger
 
-- `startRNVNetworkCapture`
-- `stopRNVNetworkCapture`
-- `createRNVNetworkCaptureController`
-- `addRNVNetworkListener`
+## Cách sử dụng
 
-It also exposes aliases that match the npm package name:
+### 1. Cài package
 
-- `startRNNetworkDebugger`
-- `stopRNNetworkDebugger`
-- `createRNNetworkDebuggerController`
-- `addRNNetworkDebuggerListener`
+```bash
+npm install @quocandev27/rn_network_debugger
+```
 
-And it now includes a bootstrap/config layer so the React Native app does not need
-its own `startRNVNetworkCapture.ts` file:
+hoặc
 
-- `defineRNNetworkDebuggerConfig`
-- `bootRNNetworkDebugger`
-- `stopRNNetworkDebuggerBootstrap`
-- `resolveRNNetworkDebuggerViewerHost`
-- `resolveRNNetworkDebuggerViewerURL`
+```bash
+yarn add @quocandev27/rn_network_debugger
+```
 
-## Usage
+### 2. Cách nhanh nhất: boot trực tiếp bằng port
 
-Create one config file in the React Native app:
+```ts
+import {bootRNNetworkDebuggerWithPort} from '@quocandev27/rn_network_debugger';
+
+if (__DEV__) {
+  bootRNNetworkDebuggerWithPort(38940);
+}
+```
+
+### 3. Nếu muốn, vẫn có thể dùng file config
 
 ```ts
 // src/devtools/rnNetworkDebugger.config.ts
@@ -45,67 +44,35 @@ export default defineRNNetworkDebuggerConfig({
 });
 ```
 
-Then bootstrap the debugger with package actions:
-
 ```ts
-import {
-  bootRNNetworkDebugger,
-  stopRNNetworkDebuggerBootstrap,
-} from '@quocandev27/rn_network_debugger';
+import {bootRNNetworkDebugger} from '@quocandev27/rn_network_debugger';
 import rnNetworkDebuggerConfig from './src/devtools/rnNetworkDebugger.config';
 
 if (__DEV__) {
   bootRNNetworkDebugger(rnNetworkDebuggerConfig);
 }
+```
 
-// Later, if needed:
+### 4. Dừng debugger nếu cần
+
+```ts
+import {stopRNNetworkDebuggerBootstrap} from '@quocandev27/rn_network_debugger';
+
 stopRNNetworkDebuggerBootstrap();
 ```
 
-`bootRNNetworkDebugger(...)` will:
+## Ghi chú
 
-- resolve the correct host from `NativeModules.SourceCode.scriptURL` when Metro is running
-- fall back to `127.0.0.1` on iOS and `10.0.2.2` on Android
-- build `ws://<host>:<VIEWER_PORT>/rnv/network`
-- call `startRNVNetworkCapture(...)` for you
+- Thư viện tự resolve host từ Metro khi có thể.
+- iOS sẽ fallback về `127.0.0.1`.
+- Android emulator sẽ fallback về `10.0.2.2`.
+- Viewer ingest mặc định là `ws://<host>:38940/rnv/network`.
 
-### Config type
+## API chính
 
-`defineRNNetworkDebuggerConfig(...)` accepts either the uppercase config keys:
-
-- `VIEWER_HOST`
-- `VIEWER_PATH`
-- `VIEWER_PORT`
-- `VIEWER_URL`
-- `MAX_BODY_PREVIEW_CHARACTERS`
-- `MASK_HEADERS`
-
-or the camelCase equivalents:
-
-- `viewerHost`
-- `viewerPath`
-- `viewerPort`
-- `viewerURL`
-- `maxBodyPreviewCharacters`
-- `maskHeaders`
-
-Advanced low-level capture options are also supported:
-
-- `captureFetch`
-- `captureXMLHttpRequest`
-- `maxBatchSize`
-- `flushIntervalMs`
-
-## Package layout
-
-- `android/`: Android library module
-- `bootstrapRuntime.js`: shared bootstrap/config runtime
-- `ios/`: iOS native sources and JavaScript bridge
-- `index.d.ts`: exported TypeScript types
-- `RNNetworkDebugger.podspec`: iOS CocoaPods entry point
-- `react-native.config.js`: React Native autolinking metadata
-
-## Notes
-
-- The native bridge names remain compatible with the original SDK internals.
-- This package is intended for debug/dev workflows only.
+- `defineRNNetworkDebuggerConfig`
+- `bootRNNetworkDebugger`
+- `bootRNNetworkDebuggerWithPort`
+- `stopRNNetworkDebuggerBootstrap`
+- `startRNNetworkDebugger`
+- `stopRNNetworkDebugger`

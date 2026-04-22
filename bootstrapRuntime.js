@@ -71,8 +71,16 @@ function createRNNetworkDebuggerBootstrapRuntime(dependencies = {}) {
     return controller;
   }
 
+  function bootRNNetworkDebuggerWithPort(viewerPort, overrides = {}) {
+    return bootRNNetworkDebugger({
+      ...overrides,
+      VIEWER_PORT: viewerPort,
+    });
+  }
+
   return {
     bootRNNetworkDebugger,
+    bootRNNetworkDebuggerWithPort,
     resolveRNNetworkDebuggerViewerHost: resolveViewerHost,
     resolveRNNetworkDebuggerViewerURL: resolveViewerURL,
     stopRNNetworkDebuggerBootstrap,
