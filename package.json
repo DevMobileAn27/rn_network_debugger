@@ -1,6 +1,6 @@
 {
   "name": "@quocandev27/rn_network_debugger",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "Dev-only React Native network capture bridge for React Native Viewer.",
   "main": "index.js",
   "react-native": "index.js",
