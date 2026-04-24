@@ -1,6 +1,7 @@
 const DEFAULT_VIEWER_PORT = 38940;
 const DEFAULT_VIEWER_PATH = '/rnv/network';
 const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS = 2048;
+const DEFAULT_MAX_BODY_CAPTURE_CHARACTERS = null;
 const DEFAULT_MASK_HEADERS = Object.freeze([
   'authorization',
   'cookie',
@@ -123,6 +124,7 @@ function createStartOptions(input = {}) {
   const startOptions = {
     viewerURL: input.viewerURL,
     maxBodyPreviewCharacters: normalizedConfig.maxBodyPreviewCharacters,
+    maxBodyCaptureCharacters: normalizedConfig.maxBodyCaptureCharacters,
     maskHeaders: normalizedConfig.maskHeaders,
   };
 
@@ -132,6 +134,10 @@ function createStartOptions(input = {}) {
 
   if (typeof normalizedConfig.captureXMLHttpRequest === 'boolean') {
     startOptions.captureXMLHttpRequest = normalizedConfig.captureXMLHttpRequest;
+  }
+
+  if (typeof normalizedConfig.captureConsole === 'boolean') {
+    startOptions.captureConsole = normalizedConfig.captureConsole;
   }
 
   if (typeof normalizedConfig.maxBatchSize === 'number') {
@@ -170,6 +176,14 @@ function normalizeRNNetworkDebuggerConfig(config = {}) {
       ),
       DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
     ),
+    maxBodyCaptureCharacters: normalizeOptionalPositiveIntegerOrNull(
+      coalesce(
+        config.maxBodyCaptureCharacters,
+        config.MAX_BODY_CAPTURE_CHARACTERS,
+        DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
+      ),
+      DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
+    ),
     maskHeaders: normalizedMaskHeaders.map(header => String(header).toLowerCase()),
     captureFetch: normalizeOptionalBoolean(
       coalesce(config.captureFetch, config.CAPTURE_FETCH, undefined),
@@ -180,6 +194,9 @@ function normalizeRNNetworkDebuggerConfig(config = {}) {
         config.CAPTURE_XML_HTTP_REQUEST,
         undefined,
       ),
+    ),
+    captureConsole: normalizeOptionalBoolean(
+      coalesce(config.captureConsole, config.CAPTURE_CONSOLE, undefined),
     ),
     maxBatchSize: normalizeOptionalPositiveInteger(
       coalesce(config.maxBatchSize, config.MAX_BATCH_SIZE, undefined),
@@ -235,6 +252,19 @@ function normalizeOptionalPositiveInteger(value) {
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : undefined;
 }
 
+function normalizeOptionalPositiveIntegerOrNull(value, fallbackValue = null) {
+  if (value == null) {
+    return fallbackValue;
+  }
+
+  if (value === 0 || value === '0') {
+    return null;
+  }
+
+  const parsedValue = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+}
+
 function normalizeOptionalBoolean(value) {
   return typeof value === 'boolean' ? value : undefined;
 }
@@ -268,6 +298,7 @@ function isDevRuntime() {
 }
 
 module.exports = {
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,

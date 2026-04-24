@@ -1,6 +1,7 @@
 import {NativeModules, Platform} from 'react-native';
 
 const {
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,
@@ -49,6 +50,7 @@ export {
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,
   bootRNNetworkDebuggerWithPort,
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,
@@ -76,6 +78,7 @@ export default {
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,
   bootRNNetworkDebuggerWithPort,
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,

@@ -1,6 +1,6 @@
 # `@quocandev27/rn_network_debugger`
 
-Thư viện debug dành cho React Native, dùng để bắt `fetch` và `XMLHttpRequest` rồi gửi log network sang `React Native Viewer`.
+Thư viện debug dành cho React Native, dùng để bắt `fetch`, `XMLHttpRequest` và `console` rồi gửi log sang `React Native Viewer`.
 
 Package này chỉ nên dùng trong môi trường dev/debug.
 
@@ -67,6 +67,9 @@ stopRNNetworkDebuggerBootstrap();
 - iOS sẽ fallback về `127.0.0.1`.
 - Android emulator sẽ fallback về `10.0.2.2`.
 - Viewer ingest mặc định là `ws://<host>:38940/rnv/network`.
+- SDK capture `console.log/info/warn/error/debug` với object dạng structured JSON-safe.
+- `maxBodyPreviewCharacters` chỉ giới hạn phần preview.
+- `maxBodyCaptureCharacters` giới hạn phần body đầy đủ gửi sang Viewer. Mặc định là `null`, nghĩa là không cắt body đầy đủ ở SDK.
 
 ## API chính
 

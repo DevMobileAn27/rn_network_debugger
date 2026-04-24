@@ -5,7 +5,9 @@ export type RNVNetworkCaptureOptions = {
   viewerURL?: string;
   captureFetch?: boolean;
   captureXMLHttpRequest?: boolean;
+  captureConsole?: boolean;
   maxBodyPreviewCharacters?: number;
+  maxBodyCaptureCharacters?: number | null;
   maxBatchSize?: number;
   flushIntervalMs?: number;
   maskHeaders?: string[];
@@ -33,9 +35,11 @@ export type RNNetworkDebuggerConfig = {
   VIEWER_PORT?: number;
   VIEWER_URL?: string;
   MAX_BODY_PREVIEW_CHARACTERS?: number;
+  MAX_BODY_CAPTURE_CHARACTERS?: number | null;
   MASK_HEADERS?: string[];
   CAPTURE_FETCH?: boolean;
   CAPTURE_XML_HTTP_REQUEST?: boolean;
+  CAPTURE_CONSOLE?: boolean;
   MAX_BATCH_SIZE?: number;
   FLUSH_INTERVAL_MS?: number;
   viewerHost?: string;
@@ -43,9 +47,11 @@ export type RNNetworkDebuggerConfig = {
   viewerPort?: number;
   viewerURL?: string;
   maxBodyPreviewCharacters?: number;
+  maxBodyCaptureCharacters?: number | null;
   maskHeaders?: string[];
   captureFetch?: boolean;
   captureXMLHttpRequest?: boolean;
+  captureConsole?: boolean;
   maxBatchSize?: number;
   flushIntervalMs?: number;
 };
@@ -56,9 +62,11 @@ export type NormalizedRNNetworkDebuggerConfig = {
   viewerPort: number;
   viewerURL: string | null;
   maxBodyPreviewCharacters: number;
+  maxBodyCaptureCharacters: number | null;
   maskHeaders: string[];
   captureFetch?: boolean;
   captureXMLHttpRequest?: boolean;
+  captureConsole?: boolean;
   maxBatchSize?: number;
   flushIntervalMs?: number;
 };
@@ -69,6 +77,7 @@ export type RNNetworkDebuggerResolveInput = {
   config?: RNNetworkDebuggerConfig;
 };
 
+export declare const DEFAULT_MAX_BODY_CAPTURE_CHARACTERS: number | null;
 export declare const DEFAULT_MASK_HEADERS: readonly string[];
 export declare const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS: number;
 export declare const DEFAULT_VIEWER_PATH: string;
@@ -153,6 +162,7 @@ declare const RNNetworkDebugger: {
   createRNNetworkDebuggerController: typeof createRNNetworkDebuggerController;
   bootRNNetworkDebugger: typeof bootRNNetworkDebugger;
   bootRNNetworkDebuggerWithPort: typeof bootRNNetworkDebuggerWithPort;
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS: typeof DEFAULT_MAX_BODY_CAPTURE_CHARACTERS;
   DEFAULT_MASK_HEADERS: typeof DEFAULT_MASK_HEADERS;
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS: typeof DEFAULT_MAX_BODY_PREVIEW_CHARACTERS;
   DEFAULT_VIEWER_PATH: typeof DEFAULT_VIEWER_PATH;

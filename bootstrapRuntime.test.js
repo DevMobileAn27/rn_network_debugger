@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_VIEWER_PATH,
   DEFAULT_VIEWER_PORT,
@@ -60,6 +61,7 @@ test('createRNNetworkDebuggerBootstrapRuntime boots capture with resolved viewer
   assert.deepEqual(started, [
     {
       viewerURL: `ws://10.11.12.13:${DEFAULT_VIEWER_PORT}${DEFAULT_VIEWER_PATH}`,
+      maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
     },
@@ -88,8 +90,66 @@ test('createRNNetworkDebuggerBootstrapRuntime can boot directly from a viewer po
   assert.deepEqual(started, [
     {
       viewerURL: `ws://192.168.0.50:49001${DEFAULT_VIEWER_PATH}`,
+      maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
+    },
+  ]);
+});
+
+test('createRNNetworkDebuggerBootstrapRuntime passes through maxBodyCaptureCharacters override', () => {
+  const started = [];
+
+  const runtime = createRNNetworkDebuggerBootstrapRuntime({
+    getPlatform: () => 'ios',
+    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getGlobalObject: () => ({}),
+    startCapture: options => {
+      started.push(options);
+      return {stop() {}};
+    },
+  });
+
+  runtime.bootRNNetworkDebugger({
+    VIEWER_PORT: 49001,
+    MAX_BODY_CAPTURE_CHARACTERS: 65536,
+  });
+
+  assert.deepEqual(started, [
+    {
+      viewerURL: `ws://192.168.0.50:49001${DEFAULT_VIEWER_PATH}`,
+      maxBodyCaptureCharacters: 65536,
+      maxBodyPreviewCharacters: 2048,
+      maskHeaders: DEFAULT_MASK_HEADERS,
+    },
+  ]);
+});
+
+test('createRNNetworkDebuggerBootstrapRuntime passes through captureConsole override', () => {
+  const started = [];
+
+  const runtime = createRNNetworkDebuggerBootstrapRuntime({
+    getPlatform: () => 'ios',
+    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getGlobalObject: () => ({}),
+    startCapture: options => {
+      started.push(options);
+      return {stop() {}};
+    },
+  });
+
+  runtime.bootRNNetworkDebugger({
+    VIEWER_PORT: 49001,
+    CAPTURE_CONSOLE: true,
+  });
+
+  assert.deepEqual(started, [
+    {
+      viewerURL: `ws://192.168.0.50:49001${DEFAULT_VIEWER_PATH}`,
+      maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
+      maxBodyPreviewCharacters: 2048,
+      maskHeaders: DEFAULT_MASK_HEADERS,
+      captureConsole: true,
     },
   ]);
 });
