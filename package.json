@@ -1,6 +1,6 @@
 {
   "name": "@quocandev27/rn_network_debugger",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Dev-only React Native network capture bridge for React Native Viewer.",
   "main": "index.js",
   "react-native": "index.js",
@@ -22,7 +22,7 @@
     "network",
     "development"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "peerDependencies": {
     "react": "*",
     "react-native": ">=0.74"

@@ -8,7 +8,7 @@ Pod::Spec.new do |spec|
   resulting events to React Native Viewer over a local WebSocket transport.
   DESC
   spec.homepage     = 'https://local.dev/rn_network_debugger'
-  spec.license      = { :type => 'MIT', :text => 'Internal development use only.' }
+  spec.license      = { :type => 'Apache-2.0', :file => 'LICENSE' }
   spec.author       = { 'OpenAI Codex' => 'codex@example.invalid' }
   spec.platform     = :ios, '13.0'
   spec.source       = { :path => '.' }
