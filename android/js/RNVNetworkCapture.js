@@ -32,6 +32,7 @@ const state = {
   originalXMLHttpRequestSetRequestHeader: null,
   originalXMLHttpRequestAbort: null,
   nextRequestSequence: 1,
+  fetchCallDepth: 0,
   pendingEvents: [],
   flushTimer: null,
 };
@@ -306,7 +307,17 @@ function createFetchWrapper(originalFetch) {
     });
 
     try {
-      const response = await originalFetch(input, init);
+      let responsePromise;
+      // React Native's fetch creates/sends an XHR synchronously. Capture the
+      // fetch layer only; release this scope before awaiting so independent
+      // concurrent XHR requests are still captured.
+      state.fetchCallDepth += 1;
+      try {
+        responsePromise = originalFetch(input, init);
+      } finally {
+        state.fetchCallDepth -= 1;
+      }
+      const response = await responsePromise;
       const responseBody = await extractFetchResponseBody(
         response,
         state.options.maxBodyCaptureCharacters,
@@ -348,6 +359,7 @@ function createFetchWrapper(originalFetch) {
 function createXHROpenWrapper(originalOpen) {
   return function rnvInstrumentedOpen(method, url, async, user, password) {
     const metadata = ensureXHRMetadata(this);
+    metadata.isFetchTransport = state.fetchCallDepth > 0;
     metadata.method = typeof method === 'string' ? method : 'GET';
     metadata.url = String(url);
     metadata.async = async;
@@ -366,6 +378,9 @@ function createXHRSetRequestHeaderWrapper(originalSetRequestHeader) {
 function createXHRSendWrapper(originalSend) {
   return function rnvInstrumentedSend(body) {
     const metadata = ensureXHRMetadata(this);
+    if (metadata.isFetchTransport || state.fetchCallDepth > 0) {
+      return originalSend.call(this, body);
+    }
     metadata.requestId = nextRequestId('xhr');
     metadata.startedAt = Date.now();
     metadata.requestBody = captureBody(
