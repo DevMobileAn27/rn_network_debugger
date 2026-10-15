@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = 'RNNetworkDebugger'
-  spec.version      = '0.4.5'
+  spec.version      = '0.4.6'
   spec.summary      = 'Dev-only iOS network capture bridge for React Native Viewer.'
   spec.description  = <<-DESC
   RNNetworkDebugger is a dev-only React Native library that captures
