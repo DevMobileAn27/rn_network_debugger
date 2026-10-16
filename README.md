@@ -57,7 +57,9 @@ Sau khi cài, build lại app native; chỉ Reload JavaScript chưa đủ để 
 
 Viewer mặc định chỉ nhận kết nối localhost. Android USB dùng `adb reverse tcp:38940 tcp:38940`; Android Emulator đổi host trong `VIEWER_URL` thành `10.0.2.2`. Với điện thoại qua Wi-Fi, bật LAN trong Viewer, chọn IP/subnet rồi copy lại setup. Xem [→ Hướng dẫn kết nối Viewer](https://github.com/DevMobileAn27/rn_network_viewer#readme).
 
-**Thay đổi ở bản kế tiếp:** token là bắt buộc; cần nâng cấp đồng thời SDK và Viewer. Bản npm cũ chưa có cơ chế này. SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Trong Viewer → Settings → Security, bạn có thể bật/tắt riêng **Redact sensitive data** và **Limit capture**, rồi Apply & restart, copy lại SDK setup và reload app. Xem [bảo mật và nâng cấp](docs/security.md).
+Kết nối yêu cầu pairing token, có sẵn trong cấu hình **Copy SDK setup** của Viewer.
+
+SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Để thay đổi, mở **Settings → Security** trong Viewer, bật/tắt **Redact sensitive data** hoặc **Limit capture**, bấm **Apply & restart**, rồi copy lại SDK setup và reload app. Xem [→ Hướng dẫn bảo mật](docs/security.md).
 
 ## Sử dụng với AI qua MCP
 
