@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — coordinated security upgrade
+## 0.4.7 — 2026-10-16
 
 - Add independent `REDACT_SENSITIVE_DATA` / `LIMIT_CAPTURE` bootstrap options (`redactSensitiveData` / `limitCapture` at runtime), both defaulting to true.
 
