@@ -4,38 +4,40 @@ permissions:
   contents: read
 jobs:
   javascript:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
       - run: npm test
       - run: npm run check:package
       - run: npm pack --ignore-scripts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: npm-package
           path: '*.tgz'
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.0
         with:
           gradle-version: '8.13'
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      # GitHub's Ubuntu image includes Android command-line tools and licenses.
+      # Avoid setup-android v3, which attempts to install the removed 'tools' package.
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35" "build-tools;35.0.0"'
       - run: bash scripts/check-android.sh
   ios:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
       - run: npm install --prefix "$RUNNER_TEMP/rnv-rn" --ignore-scripts react-native@0.79.7 react@19.0.0

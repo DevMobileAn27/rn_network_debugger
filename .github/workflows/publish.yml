@@ -10,15 +10,15 @@ permissions:
 jobs:
   publish:
     environment: npm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           ref: v${{ inputs.version }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
