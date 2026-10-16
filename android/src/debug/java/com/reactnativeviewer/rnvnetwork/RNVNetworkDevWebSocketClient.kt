@@ -15,7 +15,8 @@ internal class RNVNetworkDevWebSocketClient {
     private var client: OkHttpClient? = null
     private var webSocket: WebSocket? = null
     private var urlString: String? = null
-    private var maxQueueSize: Int = 200
+    private var maxQueueSize: Int = 8
+    private var limitCapture = true
     private var socketOpen = false
     private var connectionHeaders: Map<String, String> = emptyMap()
     private val pendingMessages = mutableListOf<String>()
@@ -23,14 +24,16 @@ internal class RNVNetworkDevWebSocketClient {
     fun configure(
         urlString: String?,
         maxQueueSize: Int,
+        limitCapture: Boolean,
         connectionHeaders: Map<String, String>
     ) {
         synchronized(lock) {
             val normalizedURL = urlString?.takeIf { it.isNotBlank() }
-            val urlChanged = this.urlString != normalizedURL
+            val urlChanged = this.urlString != normalizedURL || this.connectionHeaders != connectionHeaders
 
             this.urlString = normalizedURL
-            this.maxQueueSize = maxOf(maxQueueSize, 50)
+            this.maxQueueSize = maxQueueSize.coerceIn(1, 8)
+            this.limitCapture = limitCapture
             this.connectionHeaders = connectionHeaders
 
             if (urlChanged) {
@@ -49,8 +52,9 @@ internal class RNVNetworkDevWebSocketClient {
     fun enqueueEnvelope(envelope: JSONObject) {
         synchronized(lock) {
             val message = envelope.toString()
+            if (limitCapture && message.toByteArray(Charsets.UTF_8).size > 512 * 1024) return
 
-            if (pendingMessages.size >= maxQueueSize) {
+            if (limitCapture && pendingMessages.size >= maxQueueSize) {
                 pendingMessages.removeAt(0)
             }
 
@@ -106,7 +110,7 @@ internal class RNVNetworkDevWebSocketClient {
         pendingMessages.clear()
 
         for (message in messages) {
-            val wasQueued = activeWebSocket.send(message)
+            val wasQueued = (!limitCapture || activeWebSocket.queueSize() < 4 * 1024 * 1024) && activeWebSocket.send(message)
             if (!wasQueued) {
                 emitStatus("send_error", "Unable to queue websocket message.")
             }
@@ -114,6 +118,7 @@ internal class RNVNetworkDevWebSocketClient {
     }
 
     private fun disconnectLocked() {
+        pendingMessages.clear()
         socketOpen = false
         webSocket?.close(1001, null)
         webSocket?.cancel()
@@ -131,6 +136,7 @@ internal class RNVNetworkDevWebSocketClient {
         return object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 synchronized(lock) {
+                    if (webSocket !== this@RNVNetworkDevWebSocketClient.webSocket) return
                     socketOpen = true
                     emitStatus("connected", null)
                     flushPendingMessagesLocked()
@@ -139,24 +145,27 @@ internal class RNVNetworkDevWebSocketClient {
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 synchronized(lock) {
+                    if (webSocket !== this@RNVNetworkDevWebSocketClient.webSocket) return
                     handleClosedLocked(code, reason)
                 }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 synchronized(lock) {
+                    if (webSocket !== this@RNVNetworkDevWebSocketClient.webSocket) return
                     handleClosedLocked(code, reason)
                 }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 synchronized(lock) {
+                    if (webSocket !== this@RNVNetworkDevWebSocketClient.webSocket) return
                     socketOpen = false
                     this@RNVNetworkDevWebSocketClient.webSocket = null
                     shutdownClientLocked()
                     emitStatus(
                         "receive_error",
-                        response?.message?.takeIf { it.isNotBlank() } ?: (t.message ?: "Unknown websocket failure.")
+                        "WebSocket connection failed."
                     )
                 }
             }

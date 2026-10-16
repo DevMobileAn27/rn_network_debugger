@@ -14,7 +14,11 @@
     "index.js",
     "react-native.config.js",
     "README.md",
-    "RNNetworkDebugger.podspec"
+    "RNNetworkDebugger.podspec",
+    "privacyRuntime.js",
+    "SECURITY.md",
+    "docs/security.md",
+    "docs/verification.md"
   ],
   "keywords": [
     "react-native",
@@ -26,5 +30,21 @@
   "peerDependencies": {
     "react": "*",
     "react-native": ">=0.74"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevMobileAn27/rn_network_debugger.git"
+  },
+  "homepage": "https://github.com/DevMobileAn27/rn_network_debugger#readme",
+  "bugs": {
+    "url": "https://github.com/DevMobileAn27/rn_network_debugger/issues"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check:package": "node scripts/check-package.cjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

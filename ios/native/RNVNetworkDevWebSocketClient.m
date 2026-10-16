@@ -1,3 +1,4 @@
+#if DEBUG
 #import "RNVNetworkDevWebSocketClient.h"
 
 #import <UIKit/UIKit.h>
@@ -8,8 +9,10 @@
 @property (nonatomic, strong, nullable) NSURLSessionWebSocketTask *webSocketTask;
 @property (nonatomic, copy, nullable) NSString *URLString;
 @property (nonatomic, assign) NSInteger maxQueueSize;
+@property (nonatomic, assign) BOOL limitCapture;
 @property (nonatomic, assign) BOOL socketOpen;
 @property (nonatomic, strong) NSMutableArray<NSString *> *pendingMessages;
+@property (nonatomic, assign) BOOL sending;
 @property (nonatomic, copy) NSDictionary<NSString *, NSString *> *connectionHeaders;
 @property (nonatomic, strong) dispatch_queue_t stateQueue;
 
@@ -18,12 +21,12 @@
 @implementation RNVNetworkDevWebSocketClient
 
 static NSString * const RNVNetworkDevExpectedPath = @"/rnv/network";
-static NSInteger const RNVNetworkDevExpectedPort = 38940;
 
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _maxQueueSize = 200;
+        _maxQueueSize = 8;
+        _limitCapture = YES;
         _pendingMessages = [NSMutableArray new];
         _connectionHeaders = @{};
         _stateQueue = dispatch_queue_create("com.reactnativeviewer.rnv-network-sdk-ios-client", DISPATCH_QUEUE_SERIAL);
@@ -49,12 +52,14 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
 
 - (void)configureWithURLString:(nullable NSString *)URLString
                   maxQueueSize:(NSInteger)maxQueueSize
+                  limitCapture:(BOOL)limitCapture
              connectionHeaders:(NSDictionary<NSString *,NSString *> *)connectionHeaders {
     dispatch_async(self.stateQueue, ^{
-        BOOL URLChanged = ![self.URLString isEqualToString:URLString ?: @""];
+        BOOL URLChanged = ![self.URLString isEqualToString:URLString ?: @""] || ![self.connectionHeaders isEqualToDictionary:connectionHeaders ?: @{}];
 
         self.URLString = URLString;
-        self.maxQueueSize = MAX(maxQueueSize, 50);
+        self.maxQueueSize = MIN(MAX(maxQueueSize, 1), 8);
+        self.limitCapture = limitCapture;
         self.connectionHeaders = connectionHeaders ?: @{};
 
         if (URLChanged) {
@@ -84,6 +89,7 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
         return;
     }
 
+    if (self.limitCapture && data.length > 512 * 1024) return;
     NSString *message = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     if (message.length == 0) {
         [self emitStatus:@"serialization_error" detail:@"Unable to encode envelope as UTF-8 string."];
@@ -91,7 +97,7 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
     }
 
     dispatch_async(self.stateQueue, ^{
-        if (self.pendingMessages.count >= self.maxQueueSize) {
+        if (self.limitCapture && self.pendingMessages.count >= self.maxQueueSize) {
             [self.pendingMessages removeObjectAtIndex:0];
         }
 
@@ -147,17 +153,24 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
         return;
     }
 
-    NSArray<NSString *> *messages = [self.pendingMessages copy];
-    [self.pendingMessages removeAllObjects];
-
-    for (NSString *message in messages) {
-        [self.webSocketTask sendMessage:[[NSURLSessionWebSocketMessage alloc] initWithString:message]
-                      completionHandler:^(NSError * _Nullable error) {
+    if (self.sending) return;
+    self.sending = YES;
+    NSString *message = self.pendingMessages.firstObject;
+    [self.pendingMessages removeObjectAtIndex:0];
+    NSURLSessionWebSocketTask *activeTask = self.webSocketTask;
+    [activeTask sendMessage:[[NSURLSessionWebSocketMessage alloc] initWithString:message]
+         completionHandler:^(NSError * _Nullable error) {
+        dispatch_async(self.stateQueue, ^{
+            if (activeTask != self.webSocketTask) return;
+            self.sending = NO;
             if (error != nil) {
-                [self emitStatus:@"send_error" detail:error.localizedDescription];
+                [self emitStatus:@"send_error" detail:@"WebSocket send failed."];
+                [self disconnectLocked];
+                return;
             }
-        }];
-    }
+            [self flushPendingMessagesLocked];
+        });
+    }];
 }
 
 - (void)startReceiveLoopLocked {
@@ -201,6 +214,8 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
 }
 
 - (void)disconnectLocked {
+    self.sending = NO;
+    [self.pendingMessages removeAllObjects];
     self.socketOpen = NO;
     [self.webSocketTask cancelWithCloseCode:NSURLSessionWebSocketCloseCodeGoingAway reason:nil];
     [self.session invalidateAndCancel];
@@ -220,8 +235,8 @@ static NSInteger const RNVNetworkDevExpectedPort = 38940;
     }
 
     NSNumber *port = URL.port;
-    if (port == nil || port.integerValue != RNVNetworkDevExpectedPort) {
-        return @"Viewer URL must use the React Native Viewer ingest port 38940, not a React Native/Metro dev server port like 8081.";
+    if (port == nil || port.integerValue < 1 || port.integerValue > 65535) {
+        return @"Viewer URL must have a valid port.";
     }
 
     NSString *path = [self normalizedPathForURL:URL];
@@ -300,3 +315,5 @@ didCloseWithCode:(NSURLSessionWebSocketCloseCode)closeCode
 }
 
 @end
+
+#endif // DEBUG

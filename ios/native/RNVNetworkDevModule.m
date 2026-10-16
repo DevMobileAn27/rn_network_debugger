@@ -1,3 +1,4 @@
+#if DEBUG
 #import "RNVNetworkDevModule.h"
 
 #import <TargetConditionals.h>
@@ -6,7 +7,7 @@
 #import "RNVNetworkDevWebSocketClient.h"
 
 static NSString * const RNVNetworkDevStatusEventName = @"RNVNetworkDevStatus";
-static NSString * const RNVNetworkDevSDKVersion = @"0.4.4";
+static NSString * const RNVNetworkDevSDKVersion = @"0.4.6";
 
 @interface RNVNetworkDevModule ()
 
@@ -70,7 +71,8 @@ RCT_EXPORT_METHOD(configure:(NSDictionary *)options) {
     NSInteger maxQueueSize = [options[@"maxQueueSize"] respondsToSelector:@selector(integerValue)] ? [options[@"maxQueueSize"] integerValue] : 200;
     NSDictionary<NSString *, NSString *> *connectionHeaders = [options[@"connectionHeaders"] isKindOfClass:[NSDictionary class]] ? options[@"connectionHeaders"] : @{};
 
-    [self.client configureWithURLString:viewerURL maxQueueSize:maxQueueSize connectionHeaders:connectionHeaders];
+    BOOL limitCapture = [options[@"limitCapture"] respondsToSelector:@selector(boolValue)] ? [options[@"limitCapture"] boolValue] : YES;
+    [self.client configureWithURLString:viewerURL maxQueueSize:maxQueueSize limitCapture:limitCapture connectionHeaders:connectionHeaders];
 }
 
 RCT_EXPORT_METHOD(setEnabled:(BOOL)enabled) {
@@ -97,6 +99,7 @@ RCT_EXPORT_METHOD(captureEvents:(NSArray<NSDictionary *> *)events) {
 - (void)invalidate {
     self.client.statusHandler = nil;
     [self.client disconnectAndClearQueue];
+    [super invalidate];
 }
 
 #pragma mark - RCTEventEmitter
@@ -179,3 +182,5 @@ static BOOL RNVNetworkDevIsSimulator(void) {
 }
 
 @end
+
+#endif // DEBUG

@@ -1,5 +1,7 @@
 import {NativeEventEmitter, NativeModules, Platform} from 'react-native';
 
+const {sanitizeCaptureEvent, redactValue} = require('../../privacyRuntime');
+
 const {createConsoleCaptureRuntime} = require('../../consoleCaptureRuntime');
 
 const MODULE_NAME = 'RNVNetworkDevModule';
@@ -7,7 +9,10 @@ const STATUS_EVENT_NAME = 'RNVNetworkDevStatus';
 const SCHEMA_VERSION = 1;
 
 const NativeModule = NativeModules[MODULE_NAME];
-const nativeEventEmitter = NativeModule ? new NativeEventEmitter(NativeModule) : null;
+const nativeEventEmitter =
+  shouldEnableSDK() && NativeModule
+    ? new NativeEventEmitter(NativeModule)
+    : null;
 
 const DEFAULT_OPTIONS = Object.freeze({
   enabled: true,
@@ -16,15 +21,28 @@ const DEFAULT_OPTIONS = Object.freeze({
   captureXMLHttpRequest: true,
   captureConsole: true,
   maxBodyPreviewCharacters: 2048,
-  maxBodyCaptureCharacters: null,
+  maxBodyCaptureCharacters: 65536,
+  viewerToken: '',
+  captureBodies: true,
+  redactSensitiveData: true,
+  limitCapture: true,
+  redactKeys: [],
   maxBatchSize: 20,
   flushIntervalMs: 150,
-  maskHeaders: ['authorization', 'cookie', 'set-cookie', 'x-access-token'],
+  maskHeaders: [
+    'authorization',
+    'cookie',
+    'set-cookie',
+    'x-access-token',
+    'x-api-key',
+    'proxy-authorization',
+  ],
 });
 
 const state = {
   isPatched: false,
   isStarted: false,
+  generation: 0,
   options: {...DEFAULT_OPTIONS},
   originalFetch: null,
   originalXMLHttpRequestOpen: null,
@@ -38,7 +56,7 @@ const state = {
 };
 const consoleCaptureRuntime = createConsoleCaptureRuntime({
   getConsole: () => globalThis.console,
-  emitEvent: event => {
+  emitEvent: (event) => {
     enqueueEvent(event);
   },
 });
@@ -49,27 +67,48 @@ export function startRNVNetworkCapture(options = {}) {
   }
 
   if (!NativeModule) {
-    return createNoopController('Native module RNVNetworkDevModule is unavailable.');
+    return createNoopController(
+      'Native module RNVNetworkDevModule is unavailable.'
+    );
   }
 
+  if (options.enabled === false) {
+    stopRNVNetworkCapture();
+    return createNoopController('Capture disabled.');
+  }
   state.options = normalizeOptions(options);
+  if (!/^[A-Za-z0-9_-]{43}$/.test(state.options.viewerToken)) {
+    stopRNVNetworkCapture();
+    return createNoopController(
+      'Copy SDK setup from Viewer Settings to pair this app.'
+    );
+  }
   const viewerURLValidation = validateViewerURL(state.options.viewerURL);
   if (!viewerURLValidation.isValid) {
+    stopRNVNetworkCapture();
     console.warn(`[RNVNetworkSDK] ${viewerURLValidation.reason}`);
     return createNoopController(viewerURLValidation.reason);
   }
 
+  state.generation += 1;
   state.isStarted = true;
 
-  NativeModule.configure({
-    enabled: true,
-    viewerURL: state.options.viewerURL,
-    maxQueueSize: state.options.maxBatchSize * 10,
-    connectionHeaders: {
-      'x-rnv-sdk-platform': 'android',
-      'x-rnv-sdk-schema-version': String(SCHEMA_VERSION),
-    },
-  });
+  try {
+    NativeModule.configure({
+      enabled: true,
+      viewerURL: state.options.viewerURL,
+      maxQueueSize: state.options.maxBatchSize * 10,
+      limitCapture: state.options.limitCapture,
+      connectionHeaders: {
+        'x-rnv-sdk-platform': 'android',
+        'x-rnv-sdk-schema-version': String(SCHEMA_VERSION),
+        Authorization: `Bearer ${state.options.viewerToken}`,
+      },
+    });
+  } catch (_) {
+    stopRNVNetworkCapture();
+    return createNoopController('Debug transport unavailable.');
+  }
 
   installPatches();
 
@@ -77,7 +116,11 @@ export function startRNVNetworkCapture(options = {}) {
 }
 
 export function stopRNVNetworkCapture() {
+  state.generation += 1;
   state.isStarted = false;
+  try {
+    NativeModule?.setEnabled?.(false);
+  } catch (_) {}
   clearFlushTimer();
   consoleCaptureRuntime.stop();
 
@@ -94,7 +137,8 @@ export function stopRNVNetworkCapture() {
   }
 
   if (state.originalXMLHttpRequestSetRequestHeader) {
-    XMLHttpRequest.prototype.setRequestHeader = state.originalXMLHttpRequestSetRequestHeader;
+    XMLHttpRequest.prototype.setRequestHeader =
+      state.originalXMLHttpRequestSetRequestHeader;
   }
 
   if (state.originalXMLHttpRequestAbort) {
@@ -121,31 +165,51 @@ function createController() {
   return {
     stop: stopRNVNetworkCapture,
     reconfigure(nextOptions = {}) {
-      const previousCaptureConsole = state.options.captureConsole;
+      if (nextOptions.enabled === false) {
+        stopRNVNetworkCapture();
+        return;
+      }
+      if (
+        nextOptions.viewerToken !== undefined &&
+        !/^[A-Za-z0-9_-]{43}$/.test(nextOptions.viewerToken)
+      ) {
+        stopRNVNetworkCapture();
+        return;
+      }
+      state.generation += 1;
+      clearFlushTimer();
+      state.pendingEvents = [];
       state.options = normalizeOptions({...state.options, ...nextOptions});
       const viewerURLValidation = validateViewerURL(state.options.viewerURL);
       if (!viewerURLValidation.isValid) {
+        stopRNVNetworkCapture();
         console.warn(`[RNVNetworkSDK] ${viewerURLValidation.reason}`);
         return;
       }
 
-      if (state.options.captureConsole && !previousCaptureConsole) {
-        consoleCaptureRuntime.start();
+      if (state.options.captureConsole) {
+        consoleCaptureRuntime.start({limitCapture: state.options.limitCapture});
       }
 
-      if (!state.options.captureConsole && previousCaptureConsole) {
+      if (!state.options.captureConsole) {
         consoleCaptureRuntime.stop();
       }
 
-      NativeModule?.configure?.({
-        enabled: true,
-        viewerURL: state.options.viewerURL,
-        maxQueueSize: state.options.maxBatchSize * 10,
-        connectionHeaders: {
-          'x-rnv-sdk-platform': 'android',
-          'x-rnv-sdk-schema-version': String(SCHEMA_VERSION),
-        },
-      });
+      try {
+        NativeModule?.configure?.({
+          enabled: true,
+          viewerURL: state.options.viewerURL,
+          maxQueueSize: state.options.maxBatchSize * 10,
+          limitCapture: state.options.limitCapture,
+          connectionHeaders: {
+            'x-rnv-sdk-platform': 'android',
+            'x-rnv-sdk-schema-version': String(SCHEMA_VERSION),
+            Authorization: `Bearer ${state.options.viewerToken}`,
+          },
+        });
+      } catch (_) {
+        stopRNVNetworkCapture();
+      }
     },
   };
 }
@@ -172,13 +236,28 @@ function normalizeOptions(options) {
         : DEFAULT_OPTIONS.captureConsole,
     maxBodyPreviewCharacters: normalizePositiveInteger(
       options.maxBodyPreviewCharacters,
-      DEFAULT_OPTIONS.maxBodyPreviewCharacters,
+      DEFAULT_OPTIONS.maxBodyPreviewCharacters
     ),
     maxBodyCaptureCharacters: normalizeCaptureCharacterLimit(
       options.maxBodyCaptureCharacters,
-      DEFAULT_OPTIONS.maxBodyCaptureCharacters,
+      DEFAULT_OPTIONS.maxBodyCaptureCharacters
     ),
-    maskHeaders: Array.isArray(options.maskHeaders) ? options.maskHeaders.map(header => String(header).toLowerCase()) : DEFAULT_OPTIONS.maskHeaders,
+    viewerToken:
+      typeof options.viewerToken === 'string' ? options.viewerToken.trim() : '',
+    captureBodies: options.captureBodies !== false,
+    redactSensitiveData: options.redactSensitiveData !== false,
+    limitCapture: options.limitCapture !== false,
+    redactKeys: Array.isArray(options.redactKeys)
+      ? options.redactKeys.map(String)
+      : [],
+    maxBatchSize: Math.min(20, Math.max(1, Number(options.maxBatchSize) || 20)),
+    flushIntervalMs: Math.min(
+      1000,
+      Math.max(50, Number(options.flushIntervalMs) || 150)
+    ),
+    maskHeaders: Array.isArray(options.maskHeaders)
+      ? options.maskHeaders.map((header) => String(header).toLowerCase())
+      : DEFAULT_OPTIONS.maskHeaders,
   };
 }
 
@@ -187,7 +266,8 @@ function validateViewerURL(viewerURL) {
   if (normalizedValue.length === 0) {
     return {
       isValid: false,
-      reason: 'viewerURL is missing. Expected React Native Viewer ingest endpoint, for example ws://<mac-ip>:38940/rnv/network.',
+      reason:
+        'viewerURL is missing. Expected React Native Viewer ingest endpoint, for example ws://<mac-ip>:38940/rnv/network.',
     };
   }
 
@@ -195,7 +275,8 @@ function validateViewerURL(viewerURL) {
   if (!parsedURL) {
     return {
       isValid: false,
-      reason: 'viewerURL is invalid. Expected websocket endpoint like ws://<mac-ip>:38940/rnv/network.',
+      reason:
+        'viewerURL is invalid. Expected websocket endpoint like ws://<mac-ip>:38940/rnv/network.',
     };
   }
 
@@ -210,14 +291,16 @@ function validateViewerURL(viewerURL) {
   if (isLikelyInspectorURL(parsedURL)) {
     return {
       isValid: false,
-      reason: 'viewerURL looks like a React Native inspector/devtools endpoint. Use the React Native Viewer ingest endpoint instead: ws://<mac-ip>:38940/rnv/network.',
+      reason:
+        'viewerURL looks like a React Native inspector/devtools endpoint. Use the React Native Viewer ingest endpoint instead: ws://<mac-ip>:38940/rnv/network.',
     };
   }
 
   if (normalizedPath !== '/rnv/network') {
     return {
       isValid: false,
-      reason: 'viewerURL must point to the React Native Viewer ingest path /rnv/network.',
+      reason:
+        'viewerURL must point to the React Native Viewer ingest path /rnv/network.',
     };
   }
 
@@ -235,7 +318,9 @@ function isLikelyInspectorURL(parsedURL) {
 }
 
 function parseWebSocketURL(value) {
-  const match = /^(ws|wss):\/\/([^/?#]+)(\/[^?#]*)?(?:\?[^#]*)?(?:#.*)?$/i.exec(value);
+  const match = /^(ws|wss):\/\/([^/?#]+)(\/[^?#]*)?(?:\?[^#]*)?(?:#.*)?$/i.exec(
+    value
+  );
   if (!match) {
     return null;
   }
@@ -266,7 +351,10 @@ function installPatches() {
     global.fetch = createFetchWrapper(state.originalFetch);
   }
 
-  if (state.options.captureXMLHttpRequest && typeof XMLHttpRequest !== 'undefined') {
+  if (
+    state.options.captureXMLHttpRequest &&
+    typeof XMLHttpRequest !== 'undefined'
+  ) {
     const prototype = XMLHttpRequest.prototype;
     state.originalXMLHttpRequestOpen = prototype.open;
     state.originalXMLHttpRequestSend = prototype.send;
@@ -274,13 +362,15 @@ function installPatches() {
     state.originalXMLHttpRequestAbort = prototype.abort;
 
     prototype.open = createXHROpenWrapper(state.originalXMLHttpRequestOpen);
-    prototype.setRequestHeader = createXHRSetRequestHeaderWrapper(state.originalXMLHttpRequestSetRequestHeader);
+    prototype.setRequestHeader = createXHRSetRequestHeaderWrapper(
+      state.originalXMLHttpRequestSetRequestHeader
+    );
     prototype.send = createXHRSendWrapper(state.originalXMLHttpRequestSend);
     prototype.abort = createXHRAbortWrapper(state.originalXMLHttpRequestAbort);
   }
 
   if (state.options.captureConsole) {
-    consoleCaptureRuntime.start();
+    consoleCaptureRuntime.start({limitCapture: state.options.limitCapture});
   }
 
   state.isPatched = true;
@@ -288,15 +378,21 @@ function installPatches() {
 
 function createFetchWrapper(originalFetch) {
   return async function rnvInstrumentedFetch(input, init) {
+    const generation = state.generation;
     const requestId = nextRequestId('fetch');
     const startedAt = Date.now();
-    const requestDescriptor = describeFetchRequest(
-      input,
-      init,
-      state.options.maskHeaders,
-      state.options.maxBodyPreviewCharacters,
-      state.options.maxBodyCaptureCharacters,
-    );
+    let requestDescriptor;
+    try {
+      requestDescriptor = describeFetchRequest(
+        input,
+        init,
+        state.options.maskHeaders,
+        state.options.maxBodyPreviewCharacters,
+        state.options.maxBodyCaptureCharacters
+      );
+    } catch (_) {
+      requestDescriptor = {requestKind: 'fetch'};
+    }
 
     enqueueEvent({
       requestId,
@@ -318,30 +414,37 @@ function createFetchWrapper(originalFetch) {
         state.fetchCallDepth -= 1;
       }
       const response = await responsePromise;
-      const responseBody = await extractFetchResponseBody(
+      void extractFetchResponseBody(
         response,
-        state.options.maxBodyCaptureCharacters,
-      );
-
-      enqueueEvent({
-        requestId,
-        phase: 'response',
-        source: 'js.fetch',
-        durationMs: Date.now() - startedAt,
-        response: {
-          statusCode: response.status,
-          statusText: response.statusText,
-          headers: sanitizeHeaders(headersToObject(response.headers), state.options.maskHeaders),
-          body: responseBody,
-          bodyPreview: previewCapturedBody(
-            responseBody,
-            state.options.maxBodyPreviewCharacters,
-          ),
-        },
-      });
+        state.options.maxBodyCaptureCharacters
+      )
+        .then((responseBody) => {
+          if (generation !== state.generation) return;
+          enqueueEvent({
+            requestId,
+            phase: 'response',
+            source: 'js.fetch',
+            durationMs: Date.now() - startedAt,
+            response: {
+              statusCode: response.status,
+              statusText: response.statusText,
+              headers: sanitizeHeaders(
+                headersToObject(response.headers),
+                state.options.maskHeaders
+              ),
+              body: responseBody,
+              bodyPreview: previewCapturedBody(
+                responseBody,
+                state.options.maxBodyPreviewCharacters
+              ),
+            },
+          });
+        })
+        .catch(() => {});
 
       return response;
     } catch (error) {
+      if (generation !== state.generation) throw error;
       enqueueEvent({
         requestId,
         phase: 'error',
@@ -381,15 +484,16 @@ function createXHRSendWrapper(originalSend) {
     if (metadata.isFetchTransport || state.fetchCallDepth > 0) {
       return originalSend.call(this, body);
     }
+    metadata.generation = state.generation;
     metadata.requestId = nextRequestId('xhr');
     metadata.startedAt = Date.now();
     metadata.requestBody = captureBody(
       body,
-      state.options.maxBodyCaptureCharacters,
+      state.options.maxBodyCaptureCharacters
     );
     metadata.requestBodyPreview = previewCapturedBody(
       metadata.requestBody,
-      state.options.maxBodyPreviewCharacters,
+      state.options.maxBodyPreviewCharacters
     );
 
     enqueueEvent({
@@ -399,7 +503,10 @@ function createXHRSendWrapper(originalSend) {
       request: {
         method: metadata.method || 'GET',
         url: metadata.url || '',
-        headers: sanitizeHeaders(metadata.requestHeaders, state.options.maskHeaders),
+        headers: sanitizeHeaders(
+          metadata.requestHeaders,
+          state.options.maskHeaders
+        ),
         body: metadata.requestBody,
         bodyPreview: metadata.requestBodyPreview,
         requestKind: 'xhr',
@@ -408,7 +515,11 @@ function createXHRSendWrapper(originalSend) {
     });
 
     const handleReadyStateChange = () => {
-      if (this.readyState !== 4 || metadata.didFinish) {
+      if (
+        this.readyState !== 4 ||
+        metadata.didFinish ||
+        metadata.generation !== state.generation
+      ) {
         return;
       }
 
@@ -416,7 +527,7 @@ function createXHRSendWrapper(originalSend) {
       teardownXHRListeners(this, metadata);
       const responseBody = extractXHRResponseBody(
         this,
-        state.options.maxBodyCaptureCharacters,
+        state.options.maxBodyCaptureCharacters
       );
 
       enqueueEvent({
@@ -427,18 +538,21 @@ function createXHRSendWrapper(originalSend) {
         response: {
           statusCode: this.status,
           statusText: this.statusText,
-          headers: sanitizeHeaders(parseRawXHRHeaders(this.getAllResponseHeaders()), state.options.maskHeaders),
+          headers: sanitizeHeaders(
+            parseRawXHRHeaders(this.getAllResponseHeaders()),
+            state.options.maskHeaders
+          ),
           body: responseBody,
           bodyPreview: previewCapturedBody(
             responseBody,
-            state.options.maxBodyPreviewCharacters,
+            state.options.maxBodyPreviewCharacters
           ),
         },
       });
     };
 
-    const handleFailure = eventType => () => {
-      if (metadata.didFinish) {
+    const handleFailure = (eventType) => () => {
+      if (metadata.didFinish || metadata.generation !== state.generation) {
         return;
       }
 
@@ -490,7 +604,16 @@ function enqueueEvent(event) {
     ...event,
   };
 
-  state.pendingEvents.push(payload);
+  try {
+    const safe = sanitizeCaptureEvent(payload, state.options);
+    if (state.options.limitCapture && JSON.stringify(safe).length > 128 * 1024)
+      return;
+    if (state.options.limitCapture && state.pendingEvents.length >= 100)
+      state.pendingEvents.shift();
+    state.pendingEvents.push(safe);
+  } catch (_) {
+    return;
+  }
 
   if (state.pendingEvents.length >= state.options.maxBatchSize) {
     flushPendingEvents();
@@ -518,7 +641,24 @@ function flushPendingEvents() {
   }
 
   const batch = state.pendingEvents.splice(0, state.pendingEvents.length);
-  NativeModule.captureEvents(batch);
+  // Debug transport must never throw into application networking or console.
+  try {
+    let chunk = [];
+    let size = 0;
+    for (const event of batch) {
+      const nextSize = JSON.stringify(event).length;
+      if (size + nextSize > 128 * 1024 && chunk.length) {
+        NativeModule.captureEvents(chunk);
+        chunk = [];
+        size = 0;
+      }
+      chunk.push(event);
+      size += nextSize;
+    }
+    if (chunk.length) NativeModule.captureEvents(chunk);
+  } catch (_) {
+    /* Drop debug data if the native transport is unavailable. */
+  }
 }
 
 function clearFlushTimer() {
@@ -533,22 +673,30 @@ function nextRequestId(prefix) {
   return `${prefix}-${Date.now()}-${sequence}`;
 }
 
-function describeFetchRequest(input, init, maskedHeaders, maxPreviewSize, maxCaptureSize) {
+function describeFetchRequest(
+  input,
+  init,
+  maskedHeaders,
+  maxPreviewSize,
+  maxCaptureSize
+) {
   const requestLike = input && typeof input === 'object' ? input : null;
-  const method = String(init?.method || requestLike?.method || 'GET').toUpperCase();
+  const method = String(
+    init?.method || requestLike?.method || 'GET'
+  ).toUpperCase();
   const url = extractFetchURL(input);
 
   const requestHeaders = sanitizeHeaders(
     mergeHeaderMaps(
       headersToObject(requestLike?.headers),
-      headersToObject(init?.headers),
+      headersToObject(init?.headers)
     ),
-    maskedHeaders,
+    maskedHeaders
   );
 
   const requestBody = captureBody(
     init?.body ?? requestLike?._bodyInit ?? requestLike?.body,
-    maxCaptureSize,
+    maxCaptureSize
   );
   const requestBodyPreview = previewCapturedBody(requestBody, maxPreviewSize);
 
@@ -575,7 +723,11 @@ function extractFetchURL(input) {
 }
 
 async function extractFetchResponseBody(response, maxCaptureSize) {
-  if (!response || typeof response.clone !== 'function') {
+  if (
+    !state.options.captureBodies ||
+    !response ||
+    typeof response.clone !== 'function'
+  ) {
     return null;
   }
 
@@ -594,8 +746,13 @@ async function extractFetchResponseBody(response, maxCaptureSize) {
 }
 
 function extractXHRResponseBody(xhr, maxCaptureSize) {
+  if (!state.options.captureBodies) return null;
   try {
-    if (xhr.responseType && xhr.responseType !== '' && xhr.responseType !== 'text') {
+    if (
+      xhr.responseType &&
+      xhr.responseType !== '' &&
+      xhr.responseType !== 'text'
+    ) {
       return null;
     }
 
@@ -646,6 +803,7 @@ function teardownXHRListeners(xhr, metadata) {
 }
 
 function captureBody(value, maxCaptureSize) {
+  if (!state.options.captureBodies) return null;
   if (value == null) {
     return null;
   }
@@ -658,7 +816,10 @@ function captureBody(value, maxCaptureSize) {
     return '[FormData]';
   }
 
-  if (typeof URLSearchParams !== 'undefined' && value instanceof URLSearchParams) {
+  if (
+    typeof URLSearchParams !== 'undefined' &&
+    value instanceof URLSearchParams
+  ) {
     return limitText(value.toString(), maxCaptureSize);
   }
 
@@ -698,9 +859,15 @@ function limitText(text, maxSize) {
     return null;
   }
 
-  if (maxSize == null) {
-    return text;
-  }
+  text = redactValue(
+    text,
+    state.options.redactKeys,
+    0,
+    new WeakSet(),
+    state.options
+  );
+  if (!state.options.limitCapture) return text;
+  maxSize = Math.min(65536, maxSize || 65536);
 
   if (text.length <= maxSize) {
     return text;
@@ -723,7 +890,9 @@ function truncateText(text, maxPreviewSize) {
 
 function normalizePositiveInteger(value, fallbackValue) {
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
 }
 
 function normalizeCaptureCharacterLimit(value, fallbackValue) {
@@ -736,7 +905,9 @@ function normalizeCaptureCharacterLimit(value, fallbackValue) {
   }
 
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
 }
 
 function mergeHeaderMaps(...maps) {
@@ -781,6 +952,7 @@ function headersToObject(headers) {
 }
 
 function sanitizeHeaders(headers, maskedHeaders) {
+  if (!state.options.redactSensitiveData) return {...headers};
   return Object.entries(headers || {}).reduce((accumulator, [key, value]) => {
     const normalizedKey = String(key);
     if (maskedHeaders.includes(normalizedKey.toLowerCase())) {

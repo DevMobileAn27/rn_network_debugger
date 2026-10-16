@@ -3,6 +3,11 @@ export type RuntimePlatform = 'ios' | 'android';
 export type RNVNetworkCaptureOptions = {
   enabled?: boolean;
   viewerURL?: string;
+  viewerToken?: string;
+  captureBodies?: boolean;
+  redactSensitiveData?: boolean;
+  limitCapture?: boolean;
+  redactKeys?: string[];
   captureFetch?: boolean;
   captureXMLHttpRequest?: boolean;
   captureConsole?: boolean;
@@ -26,7 +31,7 @@ export type RNNetworkDebuggerSubscription = {
 export type RNNetworkDebuggerStatusEvent = Record<string, unknown>;
 
 export type RNNetworkDebuggerListener = (
-  event: RNNetworkDebuggerStatusEvent,
+  event: RNNetworkDebuggerStatusEvent
 ) => void;
 
 export type RNNetworkDebuggerConfig = {
@@ -34,6 +39,11 @@ export type RNNetworkDebuggerConfig = {
   VIEWER_PATH?: string;
   VIEWER_PORT?: number;
   VIEWER_URL?: string;
+  VIEWER_TOKEN?: string;
+  CAPTURE_BODIES?: boolean;
+  REDACT_SENSITIVE_DATA?: boolean;
+  LIMIT_CAPTURE?: boolean;
+  REDACT_KEYS?: string[];
   MAX_BODY_PREVIEW_CHARACTERS?: number;
   MAX_BODY_CAPTURE_CHARACTERS?: number | null;
   MASK_HEADERS?: string[];
@@ -46,6 +56,11 @@ export type RNNetworkDebuggerConfig = {
   viewerPath?: string;
   viewerPort?: number;
   viewerURL?: string;
+  viewerToken?: string;
+  captureBodies?: boolean;
+  redactSensitiveData?: boolean;
+  limitCapture?: boolean;
+  redactKeys?: string[];
   maxBodyPreviewCharacters?: number;
   maxBodyCaptureCharacters?: number | null;
   maskHeaders?: string[];
@@ -61,6 +76,11 @@ export type NormalizedRNNetworkDebuggerConfig = {
   viewerPath: string;
   viewerPort: number;
   viewerURL: string | null;
+  viewerToken: string;
+  captureBodies: boolean;
+  redactSensitiveData: boolean;
+  limitCapture: boolean;
+  redactKeys: string[];
   maxBodyPreviewCharacters: number;
   maxBodyCaptureCharacters: number | null;
   maskHeaders: string[];
@@ -83,76 +103,76 @@ export declare const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS: number;
 export declare const DEFAULT_VIEWER_PATH: string;
 export declare const DEFAULT_VIEWER_PORT: number;
 
-export declare function defineRNNetworkDebuggerConfig<T extends RNNetworkDebuggerConfig>(
-  config: T,
-): T;
+export declare function defineRNNetworkDebuggerConfig<
+  T extends RNNetworkDebuggerConfig
+>(config: T): T;
 
 export declare function normalizeRNNetworkDebuggerConfig(
-  config?: RNNetworkDebuggerConfig,
+  config?: RNNetworkDebuggerConfig
 ): NormalizedRNNetworkDebuggerConfig;
 
 export declare function resolveRNNetworkDebuggerViewerHost(
-  input?: RNNetworkDebuggerResolveInput,
+  input?: RNNetworkDebuggerResolveInput
 ): string;
 
 export declare function resolveRNNetworkDebuggerViewerURL(
-  input?: RNNetworkDebuggerResolveInput,
+  input?: RNNetworkDebuggerResolveInput
 ): string;
 
 export declare function bootRNNetworkDebugger(
-  config?: RNNetworkDebuggerConfig,
+  config?: RNNetworkDebuggerConfig
 ): RNNetworkDebuggerController | null;
 
 export declare function bootRNNetworkDebuggerWithPort(
   viewerPort: number,
-  overrides?: RNNetworkDebuggerConfig,
+  overrides?: RNNetworkDebuggerConfig
 ): RNNetworkDebuggerController | null;
 
 export declare function stopRNNetworkDebuggerBootstrap(): void;
 
 export declare function addRNNetworkDebuggerListener(
-  listener: RNNetworkDebuggerListener,
+  listener: RNNetworkDebuggerListener
 ): RNNetworkDebuggerSubscription;
 
 export declare function createRNNetworkDebuggerController(
-  options?: RNVNetworkCaptureOptions,
+  options?: RNVNetworkCaptureOptions
 ): RNNetworkDebuggerController;
 
 export declare function startRNNetworkDebugger(
-  options?: RNVNetworkCaptureOptions,
+  options?: RNVNetworkCaptureOptions
 ): RNNetworkDebuggerController;
 
 export declare function stopRNNetworkDebugger(): void;
 
 export declare function addRNVNetworkListener(
-  listener: RNNetworkDebuggerListener,
+  listener: RNNetworkDebuggerListener
 ): RNNetworkDebuggerSubscription;
 
 export declare function createRNVNetworkCaptureController(
-  options?: RNVNetworkCaptureOptions,
+  options?: RNVNetworkCaptureOptions
 ): RNNetworkDebuggerController;
 
 export declare function startRNVNetworkCapture(
-  options?: RNVNetworkCaptureOptions,
+  options?: RNVNetworkCaptureOptions
 ): RNNetworkDebuggerController;
 
 export declare function stopRNVNetworkCapture(): void;
 
 export declare function bootRNVNetworkCapture(
-  config?: RNNetworkDebuggerConfig,
+  config?: RNNetworkDebuggerConfig
 ): RNNetworkDebuggerController | null;
 
 export declare function bootRNVNetworkCaptureWithPort(
   viewerPort: number,
-  overrides?: RNNetworkDebuggerConfig,
+  overrides?: RNNetworkDebuggerConfig
 ): RNNetworkDebuggerController | null;
 
 export declare function resolveRNVViewerHost(
-  input?: RNNetworkDebuggerResolveInput,
+  input?: RNNetworkDebuggerResolveInput
 ): string;
 
 export declare function resolveRNVViewerURL(
-  input?: RNNetworkDebuggerResolveInput,
+  input?: RNNetworkDebuggerResolveInput
 ): string;
 
 export declare function stopRNVNetworkCaptureBootstrap(): void;

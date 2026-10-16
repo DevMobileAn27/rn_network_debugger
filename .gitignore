@@ -1,0 +1,11 @@
+!.gitignore
+node_modules/
+android/build/
+android/.gradle/
+*.tgz
+.env
+.env.*
+!.env.example
+rnv.local.*
+.codegraph/
+.DS_Store

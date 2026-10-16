@@ -32,7 +32,7 @@ test('createConsoleCaptureRuntime emits structured console events without collap
   const events = [];
   const runtime = createConsoleCaptureRuntime({
     getConsole: () => fakeConsole,
-    emitEvent: event => {
+    emitEvent: (event) => {
       events.push(event);
     },
     createTimestamp: () => '2026-04-24T00:00:00.000Z',
@@ -75,7 +75,8 @@ test('createConsoleCaptureRuntime emits structured console events without collap
       level: 'log',
       source: 'js.console',
       timestamp: '2026-04-24T00:00:00.000Z',
-      message: 'common changed: {"from":{"Lang":"vi","CommentPDF":false},"to":{"Lang":"vi","AutoTransfer":false}}',
+      message:
+        'common changed: {"from":{"Lang":"vi","CommentPDF":false},"to":{"Lang":"vi","AutoTransfer":false}}',
       args: [
         {
           type: 'string',
@@ -112,4 +113,42 @@ test('createConsoleCaptureRuntime restores original console methods on stop', ()
 
   runtime.stop();
   assert.equal(fakeConsole.log, originalLog);
+});
+
+test('console keeps original behavior when capture fails', () => {
+  let calls = 0;
+  const consoleObject = {
+    log() {
+      calls++;
+    },
+  };
+  const runtime = createConsoleCaptureRuntime({
+    getConsole: () => consoleObject,
+    emitEvent() {
+      throw Error('debug unavailable');
+    },
+  });
+  runtime.start();
+  assert.doesNotThrow(() => consoleObject.log('hello'));
+  assert.equal(calls, 1);
+  runtime.stop();
+});
+
+test('unlimited console serialization preserves long collections and deep objects', () => {
+  const events = [];
+  const consoleObject = {log() {}};
+  const runtime = createConsoleCaptureRuntime({
+    getConsole: () => consoleObject,
+    emitEvent: (event) => events.push(event),
+  });
+  runtime.start({limitCapture: false});
+  let deep = {value: 'end'};
+  for (let i = 0; i < 12; i++) deep = {child: deep};
+  consoleObject.log(
+    Array.from({length: 150}, (_, i) => i),
+    deep
+  );
+  assert.equal(events[0].args[0].value.length, 150);
+  assert.ok(!JSON.stringify(events).includes('[Object]'));
+  runtime.stop();
 });

@@ -1,12 +1,14 @@
 const DEFAULT_VIEWER_PORT = 38940;
 const DEFAULT_VIEWER_PATH = '/rnv/network';
 const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS = 2048;
-const DEFAULT_MAX_BODY_CAPTURE_CHARACTERS = null;
+const DEFAULT_MAX_BODY_CAPTURE_CHARACTERS = 65536;
 const DEFAULT_MASK_HEADERS = Object.freeze([
   'authorization',
   'cookie',
   'set-cookie',
   'x-access-token',
+  'x-api-key',
+  'proxy-authorization',
 ]);
 const GLOBAL_CONTROLLER_KEY = '__RNV_NETWORK_CAPTURE_CONTROLLER__';
 
@@ -63,10 +65,12 @@ function createRNNetworkDebuggerBootstrapRuntime(dependencies = {}) {
     stopRNNetworkDebuggerBootstrap();
 
     const normalizedConfig = normalizeRNNetworkDebuggerConfig(config);
-    const controller = startCapture(createStartOptions({
-      config: normalizedConfig,
-      viewerURL: resolveViewerURL({config: normalizedConfig}),
-    }));
+    const controller = startCapture(
+      createStartOptions({
+        config: normalizedConfig,
+        viewerURL: resolveViewerURL({config: normalizedConfig}),
+      })
+    );
 
     safeGlobalObject(getGlobalObject)[GLOBAL_CONTROLLER_KEY] = controller;
     return controller;
@@ -90,7 +94,9 @@ function createRNNetworkDebuggerBootstrapRuntime(dependencies = {}) {
 
 function resolveRNNetworkDebuggerViewerHost(input = {}) {
   const normalizedConfig = normalizeRNNetworkDebuggerConfig(input.config);
-  const configuredViewerHost = normalizeOptionalString(normalizedConfig.viewerHost);
+  const configuredViewerHost = normalizeOptionalString(
+    normalizedConfig.viewerHost
+  );
   if (configuredViewerHost) {
     return stripIPv6Brackets(configuredViewerHost);
   }
@@ -110,11 +116,13 @@ function resolveRNNetworkDebuggerViewerURL(input = {}) {
     return explicitViewerURL;
   }
 
-  const host = formatViewerHost(resolveRNNetworkDebuggerViewerHost({
-    platform: input.platform,
-    scriptURL: input.scriptURL,
-    config: normalizedConfig,
-  }));
+  const host = formatViewerHost(
+    resolveRNNetworkDebuggerViewerHost({
+      platform: input.platform,
+      scriptURL: input.scriptURL,
+      config: normalizedConfig,
+    })
+  );
 
   return `ws://${host}:${normalizedConfig.viewerPort}${normalizedConfig.viewerPath}`;
 }
@@ -123,6 +131,11 @@ function createStartOptions(input = {}) {
   const normalizedConfig = normalizeRNNetworkDebuggerConfig(input.config);
   const startOptions = {
     viewerURL: input.viewerURL,
+    viewerToken: normalizedConfig.viewerToken,
+    captureBodies: normalizedConfig.captureBodies,
+    redactSensitiveData: normalizedConfig.redactSensitiveData,
+    limitCapture: normalizedConfig.limitCapture,
+    redactKeys: normalizedConfig.redactKeys,
     maxBodyPreviewCharacters: normalizedConfig.maxBodyPreviewCharacters,
     maxBodyCaptureCharacters: normalizedConfig.maxBodyCaptureCharacters,
     maskHeaders: normalizedConfig.maskHeaders,
@@ -155,54 +168,73 @@ function normalizeRNNetworkDebuggerConfig(config = {}) {
   const normalizedMaskHeaders = Array.isArray(config.maskHeaders)
     ? config.maskHeaders
     : Array.isArray(config.MASK_HEADERS)
-      ? config.MASK_HEADERS
-      : DEFAULT_MASK_HEADERS;
+    ? config.MASK_HEADERS
+    : DEFAULT_MASK_HEADERS;
 
   return {
+    redactSensitiveData:
+      coalesce(
+        config.redactSensitiveData,
+        config.REDACT_SENSITIVE_DATA,
+        true
+      ) !== false,
+    limitCapture:
+      coalesce(config.limitCapture, config.LIMIT_CAPTURE, true) !== false,
+    viewerToken:
+      normalizeOptionalString(
+        coalesce(config.viewerToken, config.VIEWER_TOKEN, '')
+      ) || '',
+    captureBodies:
+      coalesce(config.captureBodies, config.CAPTURE_BODIES, true) !== false,
+    redactKeys: Array.isArray(config.redactKeys ?? config.REDACT_KEYS)
+      ? (config.redactKeys ?? config.REDACT_KEYS).map(String)
+      : [],
     viewerHost: coalesce(config.viewerHost, config.VIEWER_HOST, null),
     viewerPath: normalizeViewerPath(
-      coalesce(config.viewerPath, config.VIEWER_PATH, DEFAULT_VIEWER_PATH),
+      coalesce(config.viewerPath, config.VIEWER_PATH, DEFAULT_VIEWER_PATH)
     ),
     viewerPort: normalizePositiveInteger(
       coalesce(config.viewerPort, config.VIEWER_PORT, DEFAULT_VIEWER_PORT),
-      DEFAULT_VIEWER_PORT,
+      DEFAULT_VIEWER_PORT
     ),
     viewerURL: coalesce(config.viewerURL, config.VIEWER_URL, null),
     maxBodyPreviewCharacters: normalizePositiveInteger(
       coalesce(
         config.maxBodyPreviewCharacters,
         config.MAX_BODY_PREVIEW_CHARACTERS,
-        DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
+        DEFAULT_MAX_BODY_PREVIEW_CHARACTERS
       ),
-      DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
+      DEFAULT_MAX_BODY_PREVIEW_CHARACTERS
     ),
     maxBodyCaptureCharacters: normalizeOptionalPositiveIntegerOrNull(
       coalesce(
         config.maxBodyCaptureCharacters,
         config.MAX_BODY_CAPTURE_CHARACTERS,
-        DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
+        DEFAULT_MAX_BODY_CAPTURE_CHARACTERS
       ),
-      DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
+      DEFAULT_MAX_BODY_CAPTURE_CHARACTERS
     ),
-    maskHeaders: normalizedMaskHeaders.map(header => String(header).toLowerCase()),
+    maskHeaders: normalizedMaskHeaders.map((header) =>
+      String(header).toLowerCase()
+    ),
     captureFetch: normalizeOptionalBoolean(
-      coalesce(config.captureFetch, config.CAPTURE_FETCH, undefined),
+      coalesce(config.captureFetch, config.CAPTURE_FETCH, undefined)
     ),
     captureXMLHttpRequest: normalizeOptionalBoolean(
       coalesce(
         config.captureXMLHttpRequest,
         config.CAPTURE_XML_HTTP_REQUEST,
-        undefined,
-      ),
+        undefined
+      )
     ),
     captureConsole: normalizeOptionalBoolean(
-      coalesce(config.captureConsole, config.CAPTURE_CONSOLE, undefined),
+      coalesce(config.captureConsole, config.CAPTURE_CONSOLE, undefined)
     ),
     maxBatchSize: normalizeOptionalPositiveInteger(
-      coalesce(config.maxBatchSize, config.MAX_BATCH_SIZE, undefined),
+      coalesce(config.maxBatchSize, config.MAX_BATCH_SIZE, undefined)
     ),
     flushIntervalMs: normalizeOptionalPositiveInteger(
-      coalesce(config.flushIntervalMs, config.FLUSH_INTERVAL_MS, undefined),
+      coalesce(config.flushIntervalMs, config.FLUSH_INTERVAL_MS, undefined)
     ),
   };
 }
@@ -213,7 +245,10 @@ function extractHostFromScriptURL(scriptURL) {
     return null;
   }
 
-  const match = /^(?:https?|ws|wss):\/\/(\[[^\]]+\]|[^/:?#]+)(?::\d+)?(?:[/?#]|$)/i.exec(value);
+  const match =
+    /^(?:https?|ws|wss):\/\/(\[[^\]]+\]|[^/:?#]+)(?::\d+)?(?:[/?#]|$)/i.exec(
+      value
+    );
   if (!match?.[1]) {
     return null;
   }
@@ -235,12 +270,16 @@ function normalizeViewerPath(path) {
     return DEFAULT_VIEWER_PATH;
   }
 
-  return normalizedValue.startsWith('/') ? normalizedValue : `/${normalizedValue}`;
+  return normalizedValue.startsWith('/')
+    ? normalizedValue
+    : `/${normalizedValue}`;
 }
 
 function normalizePositiveInteger(value, fallbackValue) {
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
 }
 
 function normalizeOptionalPositiveInteger(value) {
@@ -249,7 +288,9 @@ function normalizeOptionalPositiveInteger(value) {
   }
 
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : undefined;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : undefined;
 }
 
 function normalizeOptionalPositiveIntegerOrNull(value, fallbackValue = null) {
@@ -262,7 +303,9 @@ function normalizeOptionalPositiveIntegerOrNull(value, fallbackValue = null) {
   }
 
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
 }
 
 function normalizeOptionalBoolean(value) {
@@ -294,7 +337,7 @@ function safeGlobalObject(factory) {
 }
 
 function isDevRuntime() {
-  return typeof __DEV__ === 'undefined' ? true : Boolean(__DEV__);
+  return typeof __DEV__ !== 'undefined' && __DEV__ === true;
 }
 
 module.exports = {

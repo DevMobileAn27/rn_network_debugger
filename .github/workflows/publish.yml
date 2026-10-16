@@ -1,0 +1,31 @@
+name: Publish npm (trusted publisher)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing package.json version and v-prefixed git tag to publish
+        required: true
+permissions:
+  contents: read
+jobs:
+  publish:
+    environment: npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - name: Verify version
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: node -e "if (require('./package.json').version !== process.env.EXPECTED_VERSION) process.exit(1)"
+      - run: npm test
+      - run: npm run check:package
+      - run: npm publish --provenance --access public

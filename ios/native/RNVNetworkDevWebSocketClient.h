@@ -10,6 +10,7 @@ typedef void (^RNVNetworkDevStatusHandler)(NSString *state, NSString * _Nullable
 
 - (void)configureWithURLString:(nullable NSString *)URLString
                   maxQueueSize:(NSInteger)maxQueueSize
+                  limitCapture:(BOOL)limitCapture
              connectionHeaders:(NSDictionary<NSString *, NSString *> *)connectionHeaders;
 
 - (void)enqueueEnvelope:(NSDictionary *)envelope;

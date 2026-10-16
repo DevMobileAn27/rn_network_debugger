@@ -38,7 +38,7 @@ function createConsoleCaptureRuntime(dependencies = {}) {
     const levels = normalizeConsoleLevels(options.levels);
     installedConsole = consoleObject;
 
-    levels.forEach(level => {
+    levels.forEach((level) => {
       if (typeof consoleObject[level] !== 'function') {
         return;
       }
@@ -62,6 +62,8 @@ function createConsoleCaptureRuntime(dependencies = {}) {
             message: formatConsoleMessage(args, options),
             args: serializeConsoleArguments(args, options),
           });
+        } catch (_) {
+          // Instrumentation must not change console behavior.
         } finally {
           isEmitting = false;
         }
@@ -94,7 +96,7 @@ function createConsoleCaptureRuntime(dependencies = {}) {
 }
 
 function serializeConsoleArguments(args, options = {}) {
-  return args.map(value => ({
+  return args.map((value) => ({
     type: detectConsoleValueType(value),
     value: serializeConsoleValue(value, createSerializationOptions(options)),
   }));
@@ -102,7 +104,9 @@ function serializeConsoleArguments(args, options = {}) {
 
 function formatConsoleMessage(args, options = {}) {
   return args
-    .map(value => formatConsoleValue(value, createSerializationOptions(options)))
+    .map((value) =>
+      formatConsoleValue(value, createSerializationOptions(options))
+    )
     .join(' ');
 }
 
@@ -111,7 +115,11 @@ function formatConsoleValue(value, options) {
     return value;
   }
 
-  if (typeof value === 'number' || typeof value === 'boolean' || value == null) {
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value == null
+  ) {
     return String(value);
   }
 
@@ -123,13 +131,22 @@ function formatConsoleValue(value, options) {
   return safeJSONStringify(serializedValue);
 }
 
-function serializeConsoleValue(value, options, depth = 0, seen = new WeakSet()) {
+function serializeConsoleValue(
+  value,
+  options,
+  depth = 0,
+  seen = new WeakSet()
+) {
   if (value == null) {
     return value;
   }
 
   const valueType = typeof value;
-  if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+  if (
+    valueType === 'string' ||
+    valueType === 'number' ||
+    valueType === 'boolean'
+  ) {
     return value;
   }
 
@@ -178,7 +195,9 @@ function serializeConsoleValue(value, options, depth = 0, seen = new WeakSet()) 
   }
 
   if (ArrayBuffer.isView(value)) {
-    return `[${value.constructor?.name || 'TypedArray'} length=${value.byteLength}]`;
+    return `[${value.constructor?.name || 'TypedArray'} length=${
+      value.byteLength
+    }]`;
   }
 
   if (value instanceof ArrayBuffer) {
@@ -199,7 +218,7 @@ function serializeConsoleValue(value, options, depth = 0, seen = new WeakSet()) 
     if (Array.isArray(value)) {
       return value
         .slice(0, options.maxEntries)
-        .map(item => serializeConsoleValue(item, options, depth + 1, seen));
+        .map((item) => serializeConsoleValue(item, options, depth + 1, seen));
     }
 
     if (value instanceof Map) {
@@ -217,14 +236,19 @@ function serializeConsoleValue(value, options, depth = 0, seen = new WeakSet()) 
       return {
         values: Array.from(value.values())
           .slice(0, options.maxEntries)
-          .map(item => serializeConsoleValue(item, options, depth + 1, seen)),
+          .map((item) => serializeConsoleValue(item, options, depth + 1, seen)),
       };
     }
 
     return Object.keys(value)
       .slice(0, options.maxEntries)
       .reduce((accumulator, key) => {
-        accumulator[key] = serializeConsoleValue(value[key], options, depth + 1, seen);
+        accumulator[key] = serializeConsoleValue(
+          value[key],
+          options,
+          depth + 1,
+          seen
+        );
         return accumulator;
       }, {});
   } finally {
@@ -263,27 +287,32 @@ function normalizeConsoleLevels(levels) {
 
   return Array.from(
     new Set(
-      levels.filter(level => typeof level === 'string' && level.length > 0),
-    ),
+      levels.filter((level) => typeof level === 'string' && level.length > 0)
+    )
   );
 }
 
 function createSerializationOptions(options = {}) {
+  if (options.limitCapture === false) {
+    return {maxDepth: Infinity, maxEntries: Infinity};
+  }
   return {
     maxDepth: normalizePositiveInteger(
       options.maxDepth,
-      DEFAULT_MAX_SERIALIZATION_DEPTH,
+      DEFAULT_MAX_SERIALIZATION_DEPTH
     ),
     maxEntries: normalizePositiveInteger(
       options.maxEntries,
-      DEFAULT_MAX_COLLECTION_SIZE,
+      DEFAULT_MAX_COLLECTION_SIZE
     ),
   };
 }
 
 function normalizePositiveInteger(value, fallbackValue) {
   const parsedValue = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallbackValue;
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallbackValue;
 }
 
 function safeJSONStringify(value) {

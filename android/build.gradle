@@ -36,5 +36,5 @@ repositories {
 
 dependencies {
     implementation 'com.facebook.react:react-android'
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    debugImplementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }

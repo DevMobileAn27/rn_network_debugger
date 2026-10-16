@@ -1,4 +1,5 @@
 const test = require('node:test');
+global.__DEV__ = true;
 const assert = require('node:assert/strict');
 
 const {
@@ -15,9 +16,10 @@ test('resolveRNNetworkDebuggerViewerHost prefers the Metro host from SourceCode.
   assert.equal(
     resolveRNNetworkDebuggerViewerHost({
       platform: 'android',
-      scriptURL: 'http://192.168.1.12:8081/index.bundle?platform=android&dev=true',
+      scriptURL:
+        'http://192.168.1.12:8081/index.bundle?platform=android&dev=true',
     }),
-    '192.168.1.12',
+    '192.168.1.12'
   );
 });
 
@@ -30,7 +32,7 @@ test('resolveRNNetworkDebuggerViewerURL uses the configured VIEWER_PORT and defa
         VIEWER_PORT: 49000,
       },
     }),
-    `ws://127.0.0.1:49000${DEFAULT_VIEWER_PATH}`,
+    `ws://127.0.0.1:49000${DEFAULT_VIEWER_PATH}`
   );
 });
 
@@ -41,9 +43,10 @@ test('createRNNetworkDebuggerBootstrapRuntime boots capture with resolved viewer
 
   const runtime = createRNNetworkDebuggerBootstrapRuntime({
     getPlatform: () => 'android',
-    getScriptURL: () => 'http://10.11.12.13:8081/index.bundle?platform=android&dev=true',
+    getScriptURL: () =>
+      'http://10.11.12.13:8081/index.bundle?platform=android&dev=true',
     getGlobalObject: () => globalObject,
-    startCapture: options => {
+    startCapture: (options) => {
       started.push(options);
       return {
         stop() {
@@ -64,6 +67,11 @@ test('createRNNetworkDebuggerBootstrapRuntime boots capture with resolved viewer
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
+      viewerToken: '',
+      captureBodies: true,
+      redactSensitiveData: true,
+      limitCapture: true,
+      redactKeys: [],
     },
   ]);
 
@@ -77,9 +85,10 @@ test('createRNNetworkDebuggerBootstrapRuntime can boot directly from a viewer po
 
   const runtime = createRNNetworkDebuggerBootstrapRuntime({
     getPlatform: () => 'ios',
-    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getScriptURL: () =>
+      'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
     getGlobalObject: () => ({}),
-    startCapture: options => {
+    startCapture: (options) => {
       started.push(options);
       return {stop() {}};
     },
@@ -93,6 +102,11 @@ test('createRNNetworkDebuggerBootstrapRuntime can boot directly from a viewer po
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
+      viewerToken: '',
+      captureBodies: true,
+      redactSensitiveData: true,
+      limitCapture: true,
+      redactKeys: [],
     },
   ]);
 });
@@ -102,9 +116,10 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through maxBodyCaptureChara
 
   const runtime = createRNNetworkDebuggerBootstrapRuntime({
     getPlatform: () => 'ios',
-    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getScriptURL: () =>
+      'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
     getGlobalObject: () => ({}),
-    startCapture: options => {
+    startCapture: (options) => {
       started.push(options);
       return {stop() {}};
     },
@@ -121,6 +136,11 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through maxBodyCaptureChara
       maxBodyCaptureCharacters: 65536,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
+      viewerToken: '',
+      captureBodies: true,
+      redactSensitiveData: true,
+      limitCapture: true,
+      redactKeys: [],
     },
   ]);
 });
@@ -130,9 +150,10 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through captureConsole over
 
   const runtime = createRNNetworkDebuggerBootstrapRuntime({
     getPlatform: () => 'ios',
-    getScriptURL: () => 'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
+    getScriptURL: () =>
+      'http://192.168.0.50:8081/index.bundle?platform=ios&dev=true',
     getGlobalObject: () => ({}),
-    startCapture: options => {
+    startCapture: (options) => {
       started.push(options);
       return {stop() {}};
     },
@@ -149,7 +170,48 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through captureConsole over
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
+      viewerToken: '',
+      captureBodies: true,
+      redactSensitiveData: true,
+      limitCapture: true,
+      redactKeys: [],
       captureConsole: true,
     },
   ]);
+});
+
+test('bootstrap fails closed when __DEV__ is false or absent', () => {
+  let starts = 0;
+  const runtime = createRNNetworkDebuggerBootstrapRuntime({
+    startCapture: () => {
+      starts++;
+    },
+  });
+  for (const value of [false, undefined]) {
+    global.__DEV__ = value;
+    assert.equal(runtime.bootRNNetworkDebugger(), null);
+  }
+  global.__DEV__ = true;
+  assert.equal(starts, 0);
+});
+
+test('capture preferences default on and preserve explicit false for both naming styles', () => {
+  const {normalizeRNNetworkDebuggerConfig} = require('./bootstrapRuntime');
+  assert.equal(normalizeRNNetworkDebuggerConfig({}).redactSensitiveData, true);
+  assert.equal(normalizeRNNetworkDebuggerConfig({}).limitCapture, true);
+  for (const config of [
+    {REDACT_SENSITIVE_DATA: false, LIMIT_CAPTURE: false},
+    {redactSensitiveData: false, limitCapture: false},
+  ]) {
+    const started = [];
+    const runtime = createRNNetworkDebuggerBootstrapRuntime({
+      startCapture: (options) => {
+        started.push(options);
+        return {stop() {}};
+      },
+    });
+    runtime.bootRNNetworkDebugger(config);
+    assert.equal(started[0].redactSensitiveData, false);
+    assert.equal(started[0].limitCapture, false);
+  }
 });

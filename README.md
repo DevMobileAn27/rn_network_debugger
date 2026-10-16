@@ -21,7 +21,7 @@ Thư viện thu thập các request qua `fetch` và `XMLHttpRequest` trong JavaS
 Copy this prompt into your AI coding agent in your React Native project:
 
 ```text
-Install and set up @quocandev27/rn_network_debugger as a devDependency using this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Initialize only inside __DEV__, connect to RN Network Viewer on port 38940, run pod install for iOS, and verify the development build. Check how to exclude the SDK from release builds; devDependencies alone is not enough. Make the changes, run the necessary commands, and summarize the results.
+Install and set up @quocandev27/rn_network_debugger as a devDependency using this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Initialize only inside __DEV__ using Copy SDK setup from Viewer Settings → Security; keep the pairing token out of Git, run pod install for iOS, and verify the development build. Check how to exclude the SDK from release builds; devDependencies alone is not enough. Make the changes, run the necessary commands, and summarize the results.
 ```
 
 ## Cài đặt
@@ -50,25 +50,22 @@ Sau khi cài, build lại app native; chỉ Reload JavaScript chưa đủ để 
 
 ## Bắt đầu nhanh
 
-Thêm vào file khởi chạy, trước `AppRegistry.registerComponent`:
+1. Mở RN Network Viewer → **Settings → Security → Copy SDK setup**.
+2. Dán cấu hình vào entry point trước `AppRegistry.registerComponent`, giữ khối `if (__DEV__)`. Cấu hình có token riêng: lưu trong file local được Git ignore.
+3. Build và chạy app ở chế độ development, gọi API hoặc ghi console log.
+4. Chọn **Network** hoặc **Console** trong Viewer.
 
-```ts
-if (__DEV__) {
-  const {bootRNNetworkDebuggerWithPort} = require('@quocandev27/rn_network_debugger');
-  bootRNNetworkDebuggerWithPort(38940);
-}
-```
+Viewer mặc định chỉ nhận kết nối localhost. Android USB dùng `adb reverse tcp:38940 tcp:38940`; Android Emulator đổi host trong `VIEWER_URL` thành `10.0.2.2`. Với điện thoại qua Wi-Fi, bật LAN trong Viewer, chọn IP/subnet rồi copy lại setup. Xem [→ Hướng dẫn kết nối Viewer](https://github.com/DevMobileAn27/rn_network_viewer#readme).
 
-1. Mở RN Network Viewer, kiểm tra trạng thái **Listening :38940**.
-2. Build và chạy app React Native ở chế độ development.
-3. Gọi API hoặc ghi console log trong app.
-4. Chọn **Network** hoặc **Console** ở Viewer để xem dữ liệu. Dùng tab ứng dụng để lọc khi có nhiều app kết nối.
-
-SDK mặc định dùng địa chỉ máy chạy Metro để kết nối. Nếu chưa thấy dữ liệu, xem [→ Hướng dẫn kết nối và sử dụng Viewer](https://github.com/DevMobileAn27/rn_network_viewer#readme).
+**Thay đổi ở bản kế tiếp:** token là bắt buộc; cần nâng cấp đồng thời SDK và Viewer. Bản npm cũ chưa có cơ chế này. SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Trong Viewer → Settings → Security, bạn có thể bật/tắt riêng **Redact sensitive data** và **Limit capture**, rồi Apply & restart, copy lại SDK setup và reload app. Xem [bảo mật và nâng cấp](docs/security.md).
 
 ## Sử dụng với AI qua MCP
 
 RN Network Viewer hỗ trợ MCP để AI đọc request, response và console log. Bật **Settings → MCP** trong Viewer, rồi bấm **Copy setup command** để thiết lập client AI. MCP mặc định tắt; không cần cấu hình thêm trong SDK.
+
+## Kiểm chứng
+
+[Chính sách bảo mật](SECURITY.md) · [Kiểm thử và phạm vi tương thích](docs/verification.md) · [Workflow CI](.github/workflows/checks.yml). Dự án chưa có kiểm toán bảo mật độc lập.
 
 ## Giấy phép
 
