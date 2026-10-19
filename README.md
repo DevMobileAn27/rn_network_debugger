@@ -1,74 +1,101 @@
 # @quocandev27/rn_network_debugger
 
-Thư viện debug cho React Native trên iOS và Android, dùng cùng [RN Network Viewer](https://github.com/DevMobileAn27/rn_network_viewer) để xem network request, response và console log trên macOS/Windows.
+## 1. Giới thiệu
 
-- [→ Xem package trên npm](https://www.npmjs.com/package/@quocandev27/rn_network_debugger)
-- [→ Mở dự án RN Network Viewer trên GitHub](https://github.com/DevMobileAn27/rn_network_viewer)
-- [→ Xem mã nguồn thư viện trên GitHub](https://github.com/DevMobileAn27/rn_network_debugger)
+Thư viện giúp xem network request, response và console log của app React Native trên RN Network Viewer (macOS/Windows). Hỗ trợ `fetch`, `XMLHttpRequest` và Axios dùng adapter XHR; không thu thập request do thư viện native gọi trực tiếp.
 
-## Yêu cầu
+- [**Bấm vào để xem package trên npm**](https://www.npmjs.com/package/@quocandev27/rn_network_debugger)
+- [**Bấm vào để xem và tải RN Network Viewer**](https://github.com/DevMobileAn27/rn_network_viewer)
+- [**Bấm vào để xem mã nguồn thư viện**](https://github.com/DevMobileAn27/rn_network_debugger)
+
+## 2. Yêu cầu
 
 - React Native **0.74 trở lên**, iOS hoặc Android.
 - Chạy trong môi trường development/debug.
 - Máy tính có RN Network Viewer và thiết bị có thể kết nối tới máy tính đó.
 
-Với React Native **dưới 0.74**, bạn có thể dùng [Flipper](https://fbflipper.com/) để debug network và log, tùy cấu hình dự án. Từ React Native 0.74, tích hợp Flipper mặc định đã được gỡ khỏi template dự án mới.
+Với React Native **dưới 0.74**, bạn có thể dùng [**Flipper (Bấm vào để xem dự án Flipper)**](https://fbflipper.com/) để debug network và log, tùy cấu hình dự án. Từ React Native 0.74, tích hợp Flipper mặc định đã được gỡ khỏi template dự án mới.
 
-Thư viện thu thập các request qua `fetch` và `XMLHttpRequest` trong JavaScript, cùng `console.log`, `info`, `warn`, `error`, `debug`. Axios dùng adapter XHR cũng được thu thập. Request do thư viện native gọi trực tiếp không nằm trong phạm vi này.
+## 3. Cài nhanh thư viện với prompt AI
 
-## Quick install with AI prompt
-
-Copy this prompt into your AI coding agent in your React Native project:
+Copy prompt sau vào AI trong dự án React Native:
 
 ```text
-Install and set up @quocandev27/rn_network_debugger as a devDependency using this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Initialize only inside __DEV__ using Copy SDK setup from Viewer Settings → Security; keep the pairing token out of Git, run pod install for iOS, and verify the development build. Check how to exclude the SDK from release builds; devDependencies alone is not enough. Make the changes, run the necessary commands, and summarize the results.
+Install @quocandev27/rn_network_debugger as a devDependency with this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Create a dev-only init function using Viewer → Settings → Security → Copy SDK setup; keep the token out of Git. Run pod install for iOS, rebuild, and verify network/log capture. Check release exclusion; devDependencies alone is not enough.
 ```
 
-## Cài đặt
+## 4. Cài đặt thủ công
 
-Trong dự án React Native, cài vào `devDependencies`:
+Chọn lệnh theo package manager của dự án:
 
 ```sh
 yarn add -D @quocandev27/rn_network_debugger
 ```
 
-Hoặc dùng npm:
-
 ```sh
 npm install --save-dev @quocandev27/rn_network_debugger
 ```
 
-Với iOS, chạy trong thư mục `ios`:
+Với iOS, chạy thêm trong thư mục `ios`:
 
 ```sh
 pod install
 ```
 
-Sau khi cài, build lại app native; chỉ Reload JavaScript chưa đủ để thêm native module.
+`devDependencies` không tự loại SDK khỏi APK/IPA. Giữ SDK trong `__DEV__`; nếu cần loại hoàn toàn khỏi release, xem [hướng dẫn release](docs/security.md#release-builds).
 
-`devDependencies` không tự loại SDK khỏi APK/IPA. Để bản release không chứa SDK, cần loại cả import JavaScript và native linking khỏi build release.
+## 5. Tạo hàm init
 
-## Bắt đầu nhanh
+Tạo file **`src/dev/initNetworkDebugger.local.js`**. Lấy URL, token và tùy chọn từ **Viewer → Settings → Security → Copy SDK setup** để thay vào ví dụ:
 
-1. Mở RN Network Viewer → **Settings → Security → Copy SDK setup**.
-2. Dán cấu hình vào entry point trước `AppRegistry.registerComponent`, giữ khối `if (__DEV__)`. Cấu hình có token riêng: lưu trong file local được Git ignore.
-3. Build và chạy app ở chế độ development, gọi API hoặc ghi console log.
-4. Chọn **Network** hoặc **Console** trong Viewer.
+```js
+export function initNetworkDebugger() {
+  if (!__DEV__) return;
 
-Viewer mặc định chỉ nhận kết nối localhost. Android USB dùng `adb reverse tcp:38940 tcp:38940`; Android Emulator đổi host trong `VIEWER_URL` thành `10.0.2.2`. Với điện thoại qua Wi-Fi, bật LAN trong Viewer, chọn IP/subnet rồi copy lại setup. Xem [→ Hướng dẫn kết nối Viewer](https://github.com/DevMobileAn27/rn_network_viewer#readme).
+  const {bootRNNetworkDebugger} = require('@quocandev27/rn_network_debugger');
 
-Kết nối yêu cầu pairing token, có sẵn trong cấu hình **Copy SDK setup** của Viewer.
+  return bootRNNetworkDebugger({
+    VIEWER_URL: 'ws://127.0.0.1:38940/rnv/network',
+    VIEWER_TOKEN: 'PASTE_TOKEN_FROM_VIEWER',
+    REDACT_SENSITIVE_DATA: true,
+    LIMIT_CAPTURE: true,
+  });
+}
+```
 
-SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Để thay đổi, mở **Settings → Security** trong Viewer, bật/tắt **Redact sensitive data** hoặc **Limit capture**, bấm **Apply & restart**, rồi copy lại SDK setup và reload app. Xem [→ Hướng dẫn bảo mật](docs/security.md).
+Thêm file chứa token vào **`.gitignore`**:
 
-## Sử dụng với AI qua MCP
+```gitignore
+src/dev/initNetworkDebugger.local.js
+```
 
-RN Network Viewer hỗ trợ MCP để AI đọc request, response và console log. Bật **Settings → MCP** trong Viewer, rồi bấm **Copy setup command** để thiết lập client AI. MCP mặc định tắt; không cần cấu hình thêm trong SDK.
+Gọi hàm trong **`index.js`**, trước khi nạp `App` và đăng ký component:
 
-## Kiểm chứng
+```js
+if (__DEV__) {
+  require('./src/dev/initNetworkDebugger.local').initNetworkDebugger();
+}
 
-[Chính sách bảo mật](SECURITY.md) · [Kiểm thử và phạm vi tương thích](docs/verification.md) · [Workflow CI](.github/workflows/checks.yml). Dự án chưa có kiểm toán bảo mật độc lập.
+const {AppRegistry} = require('react-native');
+const App = require('./App').default;
+const {name: appName} = require('./app.json');
 
-## Giấy phép
+AppRegistry.registerComponent(appName, () => App);
+```
 
-Apache-2.0. Xem [LICENSE](LICENSE).
+Giữ đường dẫn `App` và tên component theo dự án của bạn.
+
+- **iOS Simulator:** dùng host `127.0.0.1` khi Viewer chạy trên cùng máy Mac.
+- **Android USB:** chạy `adb reverse tcp:38940 tcp:38940`, giữ host `127.0.0.1`.
+- **Android Emulator:** đổi host thành `10.0.2.2`.
+- **Điện thoại qua Wi-Fi:** bật LAN trong Viewer, chọn IP/subnet, **Apply & restart** rồi copy lại setup.
+
+SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Muốn bật/tắt, đổi **Redact sensitive data / Limit capture** trong Viewer, **Apply & restart**, copy lại setup rồi reload app.
+
+## 6. Kiểm chứng và Giấy phép
+
+Build lại app ở chế độ development/debug sau khi cài SDK; chỉ reload JavaScript chưa đủ. Gọi một API và `console.log('Debugger connected')`, rồi kiểm tra tab **Network** và **Console** trong Viewer.
+
+[Kiểm thử và tương thích](docs/verification.md) · [Bảo mật](SECURITY.md) · [Workflow CI](.github/workflows/checks.yml). Dự án chưa có kiểm toán bảo mật độc lập.
+
+Giấy phép **Apache-2.0** — xem [LICENSE](LICENSE).
