@@ -3,6 +3,7 @@ import {NativeEventEmitter, NativeModules, Platform} from 'react-native';
 const {sanitizeCaptureEvent, redactValue} = require('../../privacyRuntime');
 
 const {createConsoleCaptureRuntime} = require('../../consoleCaptureRuntime');
+const {DEFAULT_VIEWER_TOKEN} = require('../../bootstrapRuntime');
 
 const MODULE_NAME = 'RNVNetworkDevModule';
 const STATUS_EVENT_NAME = 'RNVNetworkDevStatus';
@@ -22,7 +23,7 @@ const DEFAULT_OPTIONS = Object.freeze({
   captureConsole: true,
   maxBodyPreviewCharacters: 2048,
   maxBodyCaptureCharacters: 65536,
-  viewerToken: '',
+  viewerToken: DEFAULT_VIEWER_TOKEN,
   captureBodies: true,
   redactSensitiveData: true,
   limitCapture: true,
@@ -243,7 +244,11 @@ function normalizeOptions(options) {
       DEFAULT_OPTIONS.maxBodyCaptureCharacters
     ),
     viewerToken:
-      typeof options.viewerToken === 'string' ? options.viewerToken.trim() : '',
+      options.viewerToken === undefined
+        ? DEFAULT_VIEWER_TOKEN
+        : typeof options.viewerToken === 'string'
+        ? options.viewerToken.trim()
+        : '',
     captureBodies: options.captureBodies !== false,
     redactSensitiveData: options.redactSensitiveData !== false,
     limitCapture: options.limitCapture !== false,

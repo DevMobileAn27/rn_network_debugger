@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const {createConsoleCaptureRuntime} = require('./consoleCaptureRuntime');
+const {DEFAULT_VIEWER_TOKEN} = require('./bootstrapRuntime');
 
 function createRuntime(platform, options = {}) {
   const events = [];
@@ -100,6 +101,8 @@ function createRuntime(platform, options = {}) {
     require: (name) =>
       name.includes('privacyRuntime')
         ? require('./privacyRuntime')
+        : name.includes('bootstrapRuntime')
+        ? require('./bootstrapRuntime')
         : {createConsoleCaptureRuntime},
   });
   context.global = context;
@@ -240,8 +243,22 @@ for (const platform of ['android', 'ios']) {
 }
 
 for (const platform of ['android', 'ios']) {
-  test(`${platform}: missing token and release build do not install capture`, async () => {
-    for (const options of [{captureOptions: {viewerToken: ''}}, {dev: false}]) {
+  test(`${platform}: omitted token uses the shared default`, async () => {
+    const {configurations, context, sent, events} = createRuntime(platform, {
+      captureOptions: {viewerToken: undefined},
+    });
+    assert.equal(configurations[0].connectionHeaders.Authorization, `Bearer ${DEFAULT_VIEWER_TOKEN}`);
+    const pending = context.fetch('https://example.com');
+    sent[0].complete();
+    await pending;
+    assert.ok(events.length > 0);
+    context.stopRNVNetworkCapture();
+  });
+  test(`${platform}: explicit invalid token and release build do not install capture`, async () => {
+    for (const options of [
+      ...['', 'wrong', null].map((viewerToken) => ({captureOptions: {viewerToken}})),
+      {dev: false},
+    ]) {
       const {context, configurations, sent, events} = createRuntime(
         platform,
         options

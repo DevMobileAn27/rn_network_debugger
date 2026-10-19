@@ -1,8 +1,8 @@
 # Security and migration
 
-These changes are for the next coordinated SDK/Viewer release, not the already published 0.4.6. Existing port-only setup must be replaced with **Viewer → Settings → Security → Copy SDK setup** (or pass `VIEWER_TOKEN` explicitly). Missing/invalid tokens leave capture disabled. Upgrade both components and rebuild iOS/Android.
+Upgrade the SDK and Viewer together and rebuild iOS/Android. When `VIEWER_TOKEN` is omitted, the SDK uses the public shared default `rnv_default_pairing_token_for_local_dev_001`. A fresh Viewer uses the same default. Existing saved Viewer tokens are preserved; use **Settings → Security → Pairing token** to set a custom token or **Use default token**, then **Apply & restart**. Custom tokens must match `VIEWER_TOKEN` in the SDK. Explicit empty/invalid tokens leave capture disabled; the Viewer still rejects missing or incorrect bearer headers.
 
-The SDK sends data to the configured Viewer URL; it has no built-in analytics/cloud upload. The Viewer defaults to localhost, permits explicit private LAN/subnet configuration and requires a pairing token. The SDK accepts a user-configured URL, including WSS; it does not itself prove that a destination is physically on a LAN. Never put the token in a committed file, URL query or production configuration. Keep the setup in a local file covered by `.gitignore`.
+The SDK sends data to the configured Viewer URL; it has no built-in analytics/cloud upload. The Viewer defaults to localhost, permits explicit private LAN/subnet configuration and checks a pairing token. The shared default is public and does not restrict access to people who know this package. Set a private custom token when you need that restriction; MCP retains its own random token. The SDK accepts a user-configured URL, including WSS; it does not itself prove that a destination is physically on a LAN. Never put a custom token in a committed file, URL query or production configuration. Keep the setup in a local file covered by `.gitignore`.
 
 ## Privacy controls
 

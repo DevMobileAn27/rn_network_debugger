@@ -7,10 +7,23 @@ const {
   DEFAULT_MASK_HEADERS,
   DEFAULT_VIEWER_PATH,
   DEFAULT_VIEWER_PORT,
+  DEFAULT_VIEWER_TOKEN,
   createRNNetworkDebuggerBootstrapRuntime,
   resolveRNNetworkDebuggerViewerHost,
   resolveRNNetworkDebuggerViewerURL,
 } = require('./bootstrapRuntime');
+
+test('default pairing is shared and explicit token overrides are preserved', () => {
+  const {normalizeRNNetworkDebuggerConfig} = require('./bootstrapRuntime');
+  assert.equal(DEFAULT_VIEWER_TOKEN, 'rnv_default_pairing_token_for_local_dev_001');
+  assert.match(DEFAULT_VIEWER_TOKEN, /^[A-Za-z0-9_-]{43}$/);
+  assert.equal(normalizeRNNetworkDebuggerConfig().viewerToken, DEFAULT_VIEWER_TOKEN);
+  for (const key of ['VIEWER_TOKEN', 'viewerToken']) {
+    assert.equal(normalizeRNNetworkDebuggerConfig({[key]: 'x'.repeat(43)}).viewerToken, 'x'.repeat(43));
+    assert.equal(normalizeRNNetworkDebuggerConfig({[key]: ''}).viewerToken, '');
+    assert.equal(normalizeRNNetworkDebuggerConfig({[key]: null}).viewerToken, '');
+  }
+});
 
 test('resolveRNNetworkDebuggerViewerHost prefers the Metro host from SourceCode.scriptURL', () => {
   assert.equal(
@@ -67,7 +80,7 @@ test('createRNNetworkDebuggerBootstrapRuntime boots capture with resolved viewer
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
-      viewerToken: '',
+      viewerToken: DEFAULT_VIEWER_TOKEN,
       captureBodies: true,
       redactSensitiveData: true,
       limitCapture: true,
@@ -102,7 +115,7 @@ test('createRNNetworkDebuggerBootstrapRuntime can boot directly from a viewer po
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
-      viewerToken: '',
+      viewerToken: DEFAULT_VIEWER_TOKEN,
       captureBodies: true,
       redactSensitiveData: true,
       limitCapture: true,
@@ -136,7 +149,7 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through maxBodyCaptureChara
       maxBodyCaptureCharacters: 65536,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
-      viewerToken: '',
+      viewerToken: DEFAULT_VIEWER_TOKEN,
       captureBodies: true,
       redactSensitiveData: true,
       limitCapture: true,
@@ -170,7 +183,7 @@ test('createRNNetworkDebuggerBootstrapRuntime passes through captureConsole over
       maxBodyCaptureCharacters: DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
       maxBodyPreviewCharacters: 2048,
       maskHeaders: DEFAULT_MASK_HEADERS,
-      viewerToken: '',
+      viewerToken: DEFAULT_VIEWER_TOKEN,
       captureBodies: true,
       redactSensitiveData: true,
       limitCapture: true,

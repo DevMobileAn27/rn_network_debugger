@@ -6,6 +6,7 @@ const {
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,
   DEFAULT_VIEWER_PATH,
   DEFAULT_VIEWER_PORT,
+  DEFAULT_VIEWER_TOKEN,
   createRNNetworkDebuggerBootstrapRuntime,
   defineRNNetworkDebuggerConfig,
   normalizeRNNetworkDebuggerConfig,
@@ -46,6 +47,7 @@ const resolveRNVViewerURL = resolveRNNetworkDebuggerViewerURL;
 const stopRNVNetworkCaptureBootstrap = stopRNNetworkDebuggerBootstrap;
 
 export {
+  DEFAULT_VIEWER_TOKEN,
   addRNNetworkDebuggerListener,
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,
@@ -74,6 +76,7 @@ export {
 };
 
 export default {
+  DEFAULT_VIEWER_TOKEN,
   addRNNetworkDebuggerListener,
   createRNNetworkDebuggerController,
   bootRNNetworkDebugger,

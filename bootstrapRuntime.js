@@ -1,5 +1,7 @@
 const DEFAULT_VIEWER_PORT = 38940;
 const DEFAULT_VIEWER_PATH = '/rnv/network';
+// Public pairing default shared with RN Network Viewer; not a private secret.
+const DEFAULT_VIEWER_TOKEN = 'rnv_default_pairing_token_for_local_dev_001';
 const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS = 2048;
 const DEFAULT_MAX_BODY_CAPTURE_CHARACTERS = 65536;
 const DEFAULT_MASK_HEADERS = Object.freeze([
@@ -182,7 +184,7 @@ function normalizeRNNetworkDebuggerConfig(config = {}) {
       coalesce(config.limitCapture, config.LIMIT_CAPTURE, true) !== false,
     viewerToken:
       normalizeOptionalString(
-        coalesce(config.viewerToken, config.VIEWER_TOKEN, '')
+        coalesce(config.viewerToken, config.VIEWER_TOKEN, DEFAULT_VIEWER_TOKEN)
       ) || '',
     captureBodies:
       coalesce(config.captureBodies, config.CAPTURE_BODIES, true) !== false,
@@ -341,6 +343,7 @@ function isDevRuntime() {
 }
 
 module.exports = {
+  DEFAULT_VIEWER_TOKEN,
   DEFAULT_MAX_BODY_CAPTURE_CHARACTERS,
   DEFAULT_MASK_HEADERS,
   DEFAULT_MAX_BODY_PREVIEW_CHARACTERS,

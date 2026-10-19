@@ -3,6 +3,7 @@ export type RuntimePlatform = 'ios' | 'android';
 export type RNVNetworkCaptureOptions = {
   enabled?: boolean;
   viewerURL?: string;
+  /** Omit to use DEFAULT_VIEWER_TOKEN. Set a custom token to match Viewer. */
   viewerToken?: string;
   captureBodies?: boolean;
   redactSensitiveData?: boolean;
@@ -39,6 +40,7 @@ export type RNNetworkDebuggerConfig = {
   VIEWER_PATH?: string;
   VIEWER_PORT?: number;
   VIEWER_URL?: string;
+  /** Omit to use DEFAULT_VIEWER_TOKEN. Set a custom token to match Viewer. */
   VIEWER_TOKEN?: string;
   CAPTURE_BODIES?: boolean;
   REDACT_SENSITIVE_DATA?: boolean;
@@ -102,6 +104,7 @@ export declare const DEFAULT_MASK_HEADERS: readonly string[];
 export declare const DEFAULT_MAX_BODY_PREVIEW_CHARACTERS: number;
 export declare const DEFAULT_VIEWER_PATH: string;
 export declare const DEFAULT_VIEWER_PORT: number;
+export declare const DEFAULT_VIEWER_TOKEN: string;
 
 export declare function defineRNNetworkDebuggerConfig<
   T extends RNNetworkDebuggerConfig
@@ -178,6 +181,7 @@ export declare function resolveRNVViewerURL(
 export declare function stopRNVNetworkCaptureBootstrap(): void;
 
 declare const RNNetworkDebugger: {
+  DEFAULT_VIEWER_TOKEN: typeof DEFAULT_VIEWER_TOKEN;
   addRNNetworkDebuggerListener: typeof addRNNetworkDebuggerListener;
   createRNNetworkDebuggerController: typeof createRNNetworkDebuggerController;
   bootRNNetworkDebugger: typeof bootRNNetworkDebugger;

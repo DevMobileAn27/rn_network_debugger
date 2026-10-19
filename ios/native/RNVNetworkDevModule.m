@@ -7,7 +7,7 @@
 #import "RNVNetworkDevWebSocketClient.h"
 
 static NSString * const RNVNetworkDevStatusEventName = @"RNVNetworkDevStatus";
-static NSString * const RNVNetworkDevSDKVersion = @"0.4.7";
+static NSString * const RNVNetworkDevSDKVersion = @"0.4.8";
 
 @interface RNVNetworkDevModule ()
 

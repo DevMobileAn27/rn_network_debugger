@@ -21,7 +21,7 @@ Với React Native **dưới 0.74**, bạn có thể dùng [**Flipper (Bấm và
 Copy prompt sau vào AI trong dự án React Native:
 
 ```text
-Install @quocandev27/rn_network_debugger as a devDependency with this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Create a dev-only init function using Viewer → Settings → Security → Copy SDK setup; keep the token out of Git. Run pod install for iOS, rebuild, and verify network/log capture. Check release exclusion; devDependencies alone is not enough.
+Install @quocandev27/rn_network_debugger as a devDependency with this project's package manager. Follow https://github.com/DevMobileAn27/rn_network_debugger#readme. Create a dev-only init function; omit VIEWER_TOKEN to use the shared default. If Viewer uses a custom token, copy its SDK setup and keep that token out of Git. Run pod install for iOS, rebuild, and verify network/log capture. Check release exclusion; devDependencies alone is not enough.
 ```
 
 ## 4. Cài đặt thủ công
@@ -46,7 +46,9 @@ pod install
 
 ## 5. Tạo hàm init
 
-Tạo file **`src/dev/initNetworkDebugger.local.js`**. Lấy URL, token và tùy chọn từ **Viewer → Settings → Security → Copy SDK setup** để thay vào ví dụ:
+### Cơ bản
+
+Tạo file **`src/dev/initNetworkDebugger.local.js`**:
 
 ```js
 export function initNetworkDebugger() {
@@ -56,17 +58,8 @@ export function initNetworkDebugger() {
 
   return bootRNNetworkDebugger({
     VIEWER_URL: 'ws://127.0.0.1:38940/rnv/network',
-    VIEWER_TOKEN: 'PASTE_TOKEN_FROM_VIEWER',
-    REDACT_SENSITIVE_DATA: true,
-    LIMIT_CAPTURE: true,
   });
 }
-```
-
-Thêm file chứa token vào **`.gitignore`**:
-
-```gitignore
-src/dev/initNetworkDebugger.local.js
 ```
 
 Gọi hàm trong **`index.js`**, trước khi nạp `App` và đăng ký component:
@@ -89,6 +82,30 @@ Giữ đường dẫn `App` và tên component theo dự án của bạn.
 - **Android USB:** chạy `adb reverse tcp:38940 tcp:38940`, giữ host `127.0.0.1`.
 - **Android Emulator:** đổi host thành `10.0.2.2`.
 - **Điện thoại qua Wi-Fi:** bật LAN trong Viewer, chọn IP/subnet, **Apply & restart** rồi copy lại setup.
+
+### Nâng cao
+
+Nếu muốn tăng tính bảo mật, đổi token ở cả Viewer và SDK. Token mặc định là giá trị công khai dùng chung.
+
+1. Sửa **Viewer → Settings → Security → Pairing token**, bấm **Apply & restart**.
+2. Bấm **Copy SDK setup**, lấy token để thêm `VIEWER_TOKEN` vào hàm init:
+
+   ```js
+   return bootRNNetworkDebugger({
+     VIEWER_URL: 'ws://127.0.0.1:38940/rnv/network',
+     VIEWER_TOKEN: 'YOUR_CUSTOM_TOKEN', // Phải trùng token trong Viewer.
+   });
+   ```
+
+3. Thêm file chứa token vào **`.gitignore`**:
+
+   ```gitignore
+   src/dev/initNetworkDebugger.local.js
+   ```
+
+4. Reload app React Native.
+
+Để về mặc định, chọn **Use default token → Apply & restart** trong Viewer và bỏ `VIEWER_TOKEN` trong hàm init. Token đã lưu được giữ khi nâng cấp.
 
 SDK mặc định che dữ liệu nhạy cảm và giới hạn capture. Muốn bật/tắt, đổi **Redact sensitive data / Limit capture** trong Viewer, **Apply & restart**, copy lại setup rồi reload app.
 

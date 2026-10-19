@@ -19,7 +19,7 @@ class RNVNetworkDevModule(
     companion object {
         const val MODULE_NAME = "RNVNetworkDevModule"
         private const val STATUS_EVENT_NAME = "RNVNetworkDevStatus"
-        private const val SDK_VERSION = "0.4.7"
+        private const val SDK_VERSION = "0.4.8"
     }
 
     private val client = RNVNetworkDevWebSocketClient()
